@@ -4,6 +4,14 @@ import { SampleStatus } from '../../shared/types.js'
 
 const router = Router()
 
+function getLastInsertId(): number {
+  const stmt = db.prepare('SELECT last_insert_rowid() as id')
+  stmt.step()
+  const row = stmt.getAsObject() as { id: number }
+  stmt.free()
+  return row.id
+}
+
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const search = req.query.search as string | undefined
@@ -28,7 +36,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     res.json({ success: true, data: results })
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to fetch samples' })
+    res.status(500).json({ success: false, error: '获取样本列表失败' })
   }
 })
 
@@ -37,7 +45,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     const { code, name, type, source } = req.body
 
     if (!code || !name || !type || !source) {
-      res.status(400).json({ success: false, error: 'Missing required fields' })
+      res.status(400).json({ success: false, error: '缺少必填字段' })
       return
     }
 
@@ -45,21 +53,21 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     existing.bind([code])
     if (existing.step()) {
       existing.free()
-      res.status(409).json({ success: false, error: 'Sample code already exists' })
+      res.status(409).json({ success: false, error: '样本编号已存在' })
       return
     }
     existing.free()
 
-    const insertResult = db.run(
+    db.run(
       'INSERT INTO samples (code, name, type, source) VALUES (?, ?, ?, ?)',
       [code, name, type, source]
     )
 
-    const sampleId = insertResult.lastInsertRowid as number
+    const sampleId = getLastInsertId()
 
     db.run(
       'INSERT INTO transitions (sample_id, node_name, operator, note) VALUES (?, ?, ?, ?)',
-      [sampleId, SampleStatus.REGISTERED, 'system', 'Sample registered']
+      [sampleId, SampleStatus.REGISTERED, '系统', '样本登记']
     )
 
     saveDb()
@@ -74,7 +82,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
     res.status(201).json({ success: true, data: sample })
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to create sample' })
+    res.status(500).json({ success: false, error: '创建样本失败' })
   }
 })
 
@@ -91,7 +99,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     sampleStmt.free()
 
     if (!sample) {
-      res.status(404).json({ success: false, error: 'Sample not found' })
+      res.status(404).json({ success: false, error: '样本不存在' })
       return
     }
 
@@ -105,7 +113,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
 
     res.json({ success: true, data: { ...sample, transitions } })
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to fetch sample' })
+    res.status(500).json({ success: false, error: '获取样本详情失败' })
   }
 })
 
@@ -116,7 +124,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
 
     const validStatuses = Object.values(SampleStatus) as string[]
     if (!status || !validStatuses.includes(status)) {
-      res.status(400).json({ success: false, error: 'Invalid status value' })
+      res.status(400).json({ success: false, error: '无效的状态值' })
       return
     }
 
@@ -124,7 +132,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     checkStmt.bind([id])
     if (!checkStmt.step()) {
       checkStmt.free()
-      res.status(404).json({ success: false, error: 'Sample not found' })
+      res.status(404).json({ success: false, error: '样本不存在' })
       return
     }
     checkStmt.free()
@@ -146,7 +154,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
 
     res.json({ success: true, data: sample })
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to update sample' })
+    res.status(500).json({ success: false, error: '更新样本失败' })
   }
 })
 
@@ -158,7 +166,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     checkStmt.bind([id])
     if (!checkStmt.step()) {
       checkStmt.free()
-      res.status(404).json({ success: false, error: 'Sample not found' })
+      res.status(404).json({ success: false, error: '样本不存在' })
       return
     }
     checkStmt.free()
@@ -168,9 +176,9 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
 
     saveDb()
 
-    res.json({ success: true, message: 'Sample deleted' })
+    res.json({ success: true, message: '样本已删除' })
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to delete sample' })
+    res.status(500).json({ success: false, error: '删除样本失败' })
   }
 })
 
@@ -180,7 +188,7 @@ router.post('/:id/transitions', async (req: Request, res: Response): Promise<voi
     const { node_name, operator, note } = req.body
 
     if (!node_name || !operator) {
-      res.status(400).json({ success: false, error: 'Missing required fields: node_name and operator' })
+      res.status(400).json({ success: false, error: '缺少必填字段：节点名称和操作人' })
       return
     }
 
@@ -188,17 +196,17 @@ router.post('/:id/transitions', async (req: Request, res: Response): Promise<voi
     checkStmt.bind([id])
     if (!checkStmt.step()) {
       checkStmt.free()
-      res.status(404).json({ success: false, error: 'Sample not found' })
+      res.status(404).json({ success: false, error: '样本不存在' })
       return
     }
     checkStmt.free()
 
-    const insertResult = db.run(
+    db.run(
       'INSERT INTO transitions (sample_id, node_name, operator, note) VALUES (?, ?, ?, ?)',
       [id, node_name, operator, note || '']
     )
 
-    const transitionId = insertResult.lastInsertRowid as number
+    const transitionId = getLastInsertId()
 
     saveDb()
 
@@ -212,7 +220,7 @@ router.post('/:id/transitions', async (req: Request, res: Response): Promise<voi
 
     res.status(201).json({ success: true, data: transition })
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to create transition' })
+    res.status(500).json({ success: false, error: '创建流转记录失败' })
   }
 })
 

@@ -15,14 +15,16 @@ export default function TransitionForm({ sampleId }: TransitionFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!nodeName.trim() || !operator.trim()) return
-    await addTransition(sampleId, {
+    const success = await addTransition(sampleId, {
       node_name: nodeName.trim(),
       operator: operator.trim(),
       note: note.trim(),
     })
-    setNodeName("")
-    setOperator("")
-    setNote("")
+    if (success) {
+      setNodeName("")
+      setOperator("")
+      setNote("")
+    }
   }
 
   return (

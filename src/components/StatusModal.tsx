@@ -18,8 +18,10 @@ export default function StatusModal({ sample, onClose }: StatusModalProps) {
   if (!sample) return null
 
   const handleConfirm = async () => {
-    await updateSampleStatus(sample.id, status)
-    onClose()
+    const success = await updateSampleStatus(sample.id, status)
+    if (success) {
+      onClose()
+    }
   }
 
   return (

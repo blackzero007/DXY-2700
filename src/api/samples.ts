@@ -9,11 +9,41 @@ interface ApiResponse<T> {
   error?: string
 }
 
+export class ApiError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = "ApiError"
+    this.status = status
+  }
+}
+
+async function handleResponse<T>(res: Response): Promise<T> {
+  let json: ApiResponse<T>
+  try {
+    json = await res.json()
+  } catch {
+    throw new ApiError(`请求失败：${res.status} ${res.statusText}`, res.status)
+  }
+
+  if (!res.ok) {
+    const message = json.error || `请求失败：${res.status} ${res.statusText}`
+    throw new ApiError(message, res.status)
+  }
+
+  if (!json.success) {
+    const message = json.error || "操作失败"
+    throw new ApiError(message, res.status)
+  }
+
+  return json.data
+}
+
 export async function fetchSamples(search?: string): Promise<Sample[]> {
   const query = search ? `?search=${encodeURIComponent(search)}` : ""
   const res = await fetch(`${API_BASE}${query}`)
-  const json: ApiResponse<Sample[]> = await res.json()
-  return json.data
+  return handleResponse<Sample[]>(res)
 }
 
 export async function createSample(data: { code: string; name: string; type: string; source: string }): Promise<Sample> {
@@ -22,14 +52,12 @@ export async function createSample(data: { code: string; name: string; type: str
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   })
-  const json: ApiResponse<Sample> = await res.json()
-  return json.data
+  return handleResponse<Sample>(res)
 }
 
 export async function fetchSampleById(id: number): Promise<Sample & { transitions: Transition[] }> {
   const res = await fetch(`${API_BASE}/${id}`)
-  const json: ApiResponse<Sample & { transitions: Transition[] }> = await res.json()
-  return json.data
+  return handleResponse<Sample & { transitions: Transition[] }>(res)
 }
 
 export async function updateSample(id: number, data: { status: SampleStatus }): Promise<Sample> {
@@ -38,12 +66,12 @@ export async function updateSample(id: number, data: { status: SampleStatus }): 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   })
-  const json: ApiResponse<Sample> = await res.json()
-  return json.data
+  return handleResponse<Sample>(res)
 }
 
 export async function deleteSample(id: number): Promise<void> {
-  await fetch(`${API_BASE}/${id}`, { method: "DELETE" })
+  const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" })
+  await handleResponse<void>(res)
 }
 
 export async function addTransition(
@@ -55,6 +83,5 @@ export async function addTransition(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   })
-  const json: ApiResponse<Transition> = await res.json()
-  return json.data
+  return handleResponse<Transition>(res)
 }

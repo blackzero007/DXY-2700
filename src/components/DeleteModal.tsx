@@ -13,8 +13,10 @@ export default function DeleteModal({ sample, onClose }: DeleteModalProps) {
   if (!sample) return null
 
   const handleConfirm = async () => {
-    await deleteSample(sample.id)
-    onClose()
+    const success = await deleteSample(sample.id)
+    if (success) {
+      onClose()
+    }
   }
 
   return (

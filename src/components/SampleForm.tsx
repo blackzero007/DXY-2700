@@ -14,11 +14,13 @@ export default function SampleForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!code.trim() || !name.trim()) return
-    await createSample({ code: code.trim(), name: name.trim(), type, source: source.trim() })
-    setCode("")
-    setName("")
-    setType(SAMPLE_TYPES[0])
-    setSource("")
+    const success = await createSample({ code: code.trim(), name: name.trim(), type, source: source.trim() })
+    if (success) {
+      setCode("")
+      setName("")
+      setType(SAMPLE_TYPES[0])
+      setSource("")
+    }
   }
 
   return (

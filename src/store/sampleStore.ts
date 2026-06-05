@@ -2,6 +2,8 @@ import { create } from "zustand"
 import type { Sample, Transition } from "@/types"
 import { SampleStatus } from "@/types"
 import * as api from "@/api/samples"
+import { ApiError } from "@/api/samples"
+import { useToastStore } from "@/store/toastStore"
 
 interface SampleStore {
   samples: Sample[]
@@ -10,12 +12,22 @@ interface SampleStore {
   loading: boolean
   fetchSamples: () => Promise<void>
   searchSamples: (query: string) => Promise<void>
-  createSample: (data: { code: string; name: string; type: string; source: string }) => Promise<void>
-  updateSampleStatus: (id: number, status: SampleStatus) => Promise<void>
-  deleteSample: (id: number) => Promise<void>
-  fetchSampleDetail: (id: number) => Promise<void>
-  addTransition: (id: number, data: { node_name: string; operator: string; note: string }) => Promise<void>
+  createSample: (data: { code: string; name: string; type: string; source: string }) => Promise<boolean>
+  updateSampleStatus: (id: number, status: SampleStatus) => Promise<boolean>
+  deleteSample: (id: number) => Promise<boolean>
+  fetchSampleDetail: (id: number) => Promise<boolean>
+  addTransition: (id: number, data: { node_name: string; operator: string; note: string }) => Promise<boolean>
   setSearchQuery: (query: string) => void
+}
+
+function handleError(error: unknown, defaultMessage: string): string {
+  if (error instanceof ApiError) {
+    return error.message
+  }
+  if (error instanceof Error) {
+    return error.message
+  }
+  return defaultMessage
 }
 
 export const useSampleStore = create<SampleStore>((set, get) => ({
@@ -25,53 +37,103 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
   loading: false,
 
   fetchSamples: async () => {
+    const showToast = useToastStore.getState().showToast
     set({ loading: true })
     try {
       const samples = await api.fetchSamples()
       set({ samples })
+    } catch (error) {
+      const message = handleError(error, "加载样本列表失败")
+      showToast(message, "error")
     } finally {
       set({ loading: false })
     }
   },
 
   searchSamples: async (query: string) => {
+    const showToast = useToastStore.getState().showToast
     set({ searchQuery: query, loading: true })
     try {
       const samples = await api.fetchSamples(query)
       set({ samples })
+    } catch (error) {
+      const message = handleError(error, "搜索样本失败")
+      showToast(message, "error")
     } finally {
       set({ loading: false })
     }
   },
 
   createSample: async (data) => {
-    await api.createSample(data)
-    await get().fetchSamples()
+    const showToast = useToastStore.getState().showToast
+    try {
+      await api.createSample(data)
+      await get().fetchSamples()
+      showToast("样本登记成功", "success")
+      return true
+    } catch (error) {
+      const message = handleError(error, "样本登记失败")
+      showToast(message, "error")
+      return false
+    }
   },
 
   updateSampleStatus: async (id, status) => {
-    await api.updateSample(id, { status })
-    await get().fetchSamples()
+    const showToast = useToastStore.getState().showToast
+    try {
+      await api.updateSample(id, { status })
+      await get().fetchSamples()
+      showToast("状态更新成功", "success")
+      return true
+    } catch (error) {
+      const message = handleError(error, "状态更新失败")
+      showToast(message, "error")
+      return false
+    }
   },
 
   deleteSample: async (id) => {
-    await api.deleteSample(id)
-    await get().fetchSamples()
+    const showToast = useToastStore.getState().showToast
+    try {
+      await api.deleteSample(id)
+      await get().fetchSamples()
+      showToast("样本删除成功", "success")
+      return true
+    } catch (error) {
+      const message = handleError(error, "删除样本失败")
+      showToast(message, "error")
+      return false
+    }
   },
 
   fetchSampleDetail: async (id) => {
+    const showToast = useToastStore.getState().showToast
     set({ loading: true })
     try {
       const currentSample = await api.fetchSampleById(id)
       set({ currentSample })
+      return true
+    } catch (error) {
+      const message = handleError(error, "加载样本详情失败")
+      showToast(message, "error")
+      return false
     } finally {
       set({ loading: false })
     }
   },
 
   addTransition: async (id, data) => {
-    await api.addTransition(id, data)
-    await get().fetchSampleDetail(id)
+    const showToast = useToastStore.getState().showToast
+    try {
+      await api.addTransition(id, data)
+      await get().fetchSampleDetail(id)
+      showToast("流转记录添加成功", "success")
+      return true
+    } catch (error) {
+      const message = handleError(error, "添加流转记录失败")
+      showToast(message, "error")
+      return false
+    }
   },
 
   setSearchQuery: (query) => set({ searchQuery: query }),
