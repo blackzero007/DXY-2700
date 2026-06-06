@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, FlaskConical, FileText, Clock, Tag as TagIcon, X, Plus, AlertTriangle, Paperclip, Edit } from "lucide-react"
+import { ArrowLeft, FlaskConical, FileText, Clock, Tag as TagIcon, X, Plus, AlertTriangle, Paperclip, Edit, User, ChevronRight, Activity, CheckCircle2, Archive, Trash2, FileBarChart } from "lucide-react"
 import { useSampleStore } from "@/store/sampleStore"
 import { useExceptionStore } from "@/store/exceptionStore"
 import { useTagStore } from "@/store/tagStore"
 import { SampleStatus, ExceptionStatus, ExceptionType, AttachmentType } from "@/types"
-import type { Tag, SampleExceptionWithSample, SampleAttachment, Sample } from "@/types"
+import type { Tag, SampleExceptionWithSample, SampleAttachment, Sample, Transition } from "@/types"
 import TransitionTimeline from "@/components/TransitionTimeline"
 import TransitionForm from "@/components/TransitionForm"
 import ExceptionForm from "@/components/ExceptionForm"
@@ -13,13 +13,14 @@ import ExceptionResolveForm from "@/components/ExceptionResolveForm"
 import ConfirmModal from "@/components/ConfirmModal"
 import SampleAttachmentForm from "@/components/SampleAttachmentForm"
 import StatusModal from "@/components/StatusModal"
+import { cn } from "@/lib/utils"
 
-const STATUS_COLORS: Record<SampleStatus, string> = {
-  [SampleStatus.REGISTERED]: "bg-blue-100 text-blue-700",
-  [SampleStatus.IN_PROGRESS]: "bg-amber-100 text-amber-700",
-  [SampleStatus.COMPLETED]: "bg-green-100 text-green-700",
-  [SampleStatus.ARCHIVED]: "bg-gray-100 text-gray-600",
-  [SampleStatus.DISCARDED]: "bg-red-100 text-red-700",
+const STATUS_CONFIG: Record<SampleStatus, { bgColor: string; textColor: string; ringColor: string; icon: typeof CheckCircle2; label: string }> = {
+  [SampleStatus.REGISTERED]: { bgColor: "bg-blue-50", textColor: "text-blue-700", ringColor: "ring-blue-200", icon: FileBarChart, label: "已登记" },
+  [SampleStatus.IN_PROGRESS]: { bgColor: "bg-amber-50", textColor: "text-amber-700", ringColor: "ring-amber-200", icon: Activity, label: "实验中" },
+  [SampleStatus.COMPLETED]: { bgColor: "bg-green-50", textColor: "text-green-700", ringColor: "ring-green-200", icon: CheckCircle2, label: "已完成" },
+  [SampleStatus.ARCHIVED]: { bgColor: "bg-gray-50", textColor: "text-gray-600", ringColor: "ring-gray-200", icon: Archive, label: "已归档" },
+  [SampleStatus.DISCARDED]: { bgColor: "bg-red-50", textColor: "text-red-700", ringColor: "ring-red-200", icon: Trash2, label: "已废弃" },
 }
 
 const EXCEPTION_STATUS_COLORS: Record<ExceptionStatus, string> = {
@@ -135,6 +136,41 @@ function AttachmentItem({ attachment, onEdit, onDelete }: {
   )
 }
 
+function LatestTransitionCard({ transition }: { transition: Transition }) {
+  return (
+    <div className="bg-white rounded-lg border border-primary/20 p-4 shadow-sm">
+      <div className="flex items-start gap-4">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 ring-4 ring-primary/5">
+          <Activity className="w-5 h-5 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-1">
+            <h4 className="text-base font-semibold text-gray-800">{transition.node_name}</h4>
+            <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full font-medium">
+              最新
+            </span>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
+            <div className="flex items-center gap-1">
+              <User className="w-3.5 h-3.5" />
+              <span>{transition.operator}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              <span className="font-mono">{new Date(transition.created_at).toLocaleString("zh-CN")}</span>
+            </div>
+          </div>
+          {transition.note && (
+            <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
+              <p className="text-xs text-gray-600 leading-relaxed">{transition.note}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function SampleDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -231,64 +267,28 @@ export default function SampleDetail() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-6 space-y-6 animate-fadeIn">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">{currentSample.name}</h2>
-              <p className="text-sm font-mono text-gray-400 mt-1">{currentSample.code}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[currentSample.status]}`}>
-                {currentSample.status}
-              </span>
-              <button
-                onClick={() => setStatusTarget(currentSample as Sample)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
-              >
-                <Edit className="w-3.5 h-3.5" />
-                更新状态
-              </button>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-gray-400" />
-              <div>
-                <p className="text-xs text-gray-400">类型</p>
-                <p className="text-sm text-gray-700">{currentSample.type}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <FlaskConical className="w-4 h-4 text-gray-400" />
-              <div>
-                <p className="text-xs text-gray-400">来源</p>
-                <p className="text-sm text-gray-700">{currentSample.source || "-"}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-400" />
-              <div>
-                <p className="text-xs text-gray-400">创建时间</p>
-                <p className="text-sm text-gray-700 font-mono text-xs">
-                  {new Date(currentSample.created_at).toLocaleString("zh-CN")}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-400" />
-              <div>
-                <p className="text-xs text-gray-400">更新时间</p>
-                <p className="text-sm text-gray-700 font-mono text-xs">
-                  {new Date(currentSample.updated_at).toLocaleString("zh-CN")}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-gray-100 pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <TagIcon className="w-4 h-4 text-gray-400" />
-                <span className="text-sm font-medium text-gray-700">样本标签</span>
+        {/* 顶部概览区域 */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* 样本基础信息 */}
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-start justify-between mb-5">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center flex-shrink-0">
+                  <FlaskConical className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">{currentSample.name}</h2>
+                  <p className="text-sm font-mono text-gray-400 mt-1">{currentSample.code}</p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {currentSample.tags && currentSample.tags.length > 0 ? (
+                      currentSample.tags.slice(0, 3).map((tag) => (
+                        <TagBadge key={tag.id} tag={tag} />
+                      ))
+                    ) : (
+                      <span className="text-xs text-gray-300">暂无标签</span>
+                    )}
+                  </div>
+                </div>
               </div>
               <div className="relative">
                 <button
@@ -296,7 +296,7 @@ export default function SampleDetail() {
                   className="flex items-center gap-1 px-3 py-1.5 text-xs text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  添加标签
+                  标签
                 </button>
                 {showTagSelector && (
                   <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
@@ -321,16 +321,121 @@ export default function SampleDetail() {
                 )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {currentSample.tags && currentSample.tags.length > 0 ? (
-                currentSample.tags.map((tag) => (
-                  <TagBadge key={tag.id} tag={tag} onRemove={() => handleRemoveTag(tag.id)} />
-                ))
-              ) : (
-                <span className="text-sm text-gray-300">暂无标签</span>
-              )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-gray-400 mb-1">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="text-xs">样本类型</span>
+                </div>
+                <p className="text-sm font-medium text-gray-700">{currentSample.type}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-gray-400 mb-1">
+                  <FlaskConical className="w-3.5 h-3.5" />
+                  <span className="text-xs">样本来源</span>
+                </div>
+                <p className="text-sm font-medium text-gray-700">{currentSample.source || "-"}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-gray-400 mb-1">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="text-xs">创建时间</span>
+                </div>
+                <p className="text-xs font-mono text-gray-600">
+                  {new Date(currentSample.created_at).toLocaleString("zh-CN")}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-gray-400 mb-1">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="text-xs">更新时间</span>
+                </div>
+                <p className="text-xs font-mono text-gray-600">
+                  {new Date(currentSample.updated_at).toLocaleString("zh-CN")}
+                </p>
+              </div>
+            </div>
+
+            {currentSample.tags && currentSample.tags.length > 3 && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="flex items-center gap-2">
+                  <TagIcon className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="text-xs text-gray-400">全部标签</span>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {currentSample.tags.map((tag) => (
+                    <TagBadge key={tag.id} tag={tag} onRemove={() => handleRemoveTag(tag.id)} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 状态卡片 */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-700">当前状态</h3>
+              <button
+                onClick={() => setStatusTarget(currentSample as Sample)}
+                className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                <Edit className="w-3.5 h-3.5" />
+                更新
+              </button>
+            </div>
+            <div className={cn("flex-1 rounded-xl p-5 flex flex-col items-center justify-center", STATUS_CONFIG[currentSample.status].bgColor, "ring-1", STATUS_CONFIG[currentSample.status].ringColor)}>
+              {(() => {
+                const config = STATUS_CONFIG[currentSample.status]
+                const StatusIcon = config.icon
+                return (
+                  <>
+                    <div className={cn("w-14 h-14 rounded-full flex items-center justify-center mb-3", "bg-white/80 shadow-sm")}>
+                      <StatusIcon className={cn("w-7 h-7", config.textColor)} />
+                    </div>
+                    <p className={cn("text-lg font-bold", config.textColor)}>{config.label}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      共 {currentSample.transitions?.length || 0} 次流转
+                    </p>
+                  </>
+                )
+              })()}
             </div>
           </div>
+        </div>
+
+        {/* 最新流转记录 */}
+        <div className="bg-gradient-to-r from-primary/5 via-white to-white rounded-xl shadow-sm border border-primary/10 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Activity className="w-4 h-4 text-primary" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-800">最新流转</h3>
+              <span className="text-xs text-gray-400">快速了解样本最新进展</span>
+            </div>
+            <button
+              onClick={() => {
+                const el = document.getElementById("transition-history")
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              }}
+              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+            >
+              <span>查看全部</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {currentSample.transitions && currentSample.transitions.length > 0 ? (
+            <LatestTransitionCard transition={currentSample.transitions[0]} />
+          ) : (
+            <div className="text-center py-6 text-gray-400 text-sm bg-white/50 rounded-lg border border-dashed border-gray-200">
+              <Clock className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+              <p>暂无流转记录</p>
+            </div>
+          )}
         </div>
 
         {/* 异常记录 */}
@@ -435,8 +540,16 @@ export default function SampleDetail() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">流转记录</h3>
+        <div id="transition-history" className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 scroll-mt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-gray-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800">流转历史</h3>
+            <span className="text-xs text-gray-400">
+              共 {currentSample.transitions?.length || 0} 条记录
+            </span>
+          </div>
           <TransitionTimeline transitions={currentSample.transitions} />
         </div>
 
