@@ -40,11 +40,11 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return json.data
 }
 
-export async function fetchSamples(search?: string, batchId?: number, tagId?: number): Promise<Sample[]> {
+export async function fetchSamples(search?: string, batchId?: number | null, tagId?: number | null): Promise<Sample[]> {
   const params = new URLSearchParams()
   if (search) params.set("search", search)
-  if (batchId !== undefined) params.set("batch_id", String(batchId))
-  if (tagId !== undefined) params.set("tag_id", String(tagId))
+  if (batchId != null) params.set("batch_id", String(batchId))
+  if (tagId != null) params.set("tag_id", String(tagId))
   const query = params.toString() ? `?${params.toString()}` : ""
   const res = await fetch(`${API_BASE}${query}`)
   return handleResponse<Sample[]>(res)
@@ -122,4 +122,35 @@ export async function removeTagFromSample(sampleId: number, tagId: number): Prom
     method: "DELETE",
   })
   return handleResponse<Tag[]>(res)
+}
+
+export async function exportSamples(search?: string, batchId?: number | null, tagId?: number | null): Promise<void> {
+  const params = new URLSearchParams()
+  if (search) params.set("search", search)
+  if (batchId != null) params.set("batch_id", String(batchId))
+  if (tagId != null) params.set("tag_id", String(tagId))
+  const query = params.toString() ? `?${params.toString()}` : ""
+
+  const res = await fetch(`${API_BASE}/export${query}`)
+
+  if (!res.ok) {
+    let errorMessage = "导出失败"
+    try {
+      const json = await res.json()
+      if (json.error) errorMessage = json.error
+    } catch {
+      // ignore
+    }
+    throw new ApiError(errorMessage, res.status)
+  }
+
+  const blob = await res.blob()
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `samples_${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  window.URL.revokeObjectURL(url)
 }

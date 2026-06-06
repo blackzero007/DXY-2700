@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { Eye, Trash2, Edit } from "lucide-react"
+import { Eye, Trash2, Edit, Download } from "lucide-react"
 import { useSampleStore } from "@/store/sampleStore"
 import { SampleStatus } from "@/types"
 import type { Sample } from "@/types"
@@ -31,6 +31,8 @@ function TagBadge({ name, color }: { name: string; color: string }) {
 export default function SampleTable({ onUpdateStatus, onDelete }: SampleTableProps) {
   const samples = useSampleStore((s) => s.samples)
   const loading = useSampleStore((s) => s.loading)
+  const exporting = useSampleStore((s) => s.exporting)
+  const exportSamples = useSampleStore((s) => s.exportSamples)
 
   if (loading && samples.length === 0) {
     return (
@@ -50,6 +52,17 @@ export default function SampleTable({ onUpdateStatus, onDelete }: SampleTablePro
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="font-medium text-gray-700">样本列表</h3>
+        <button
+          onClick={() => exportSamples()}
+          disabled={exporting}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Download className="w-4 h-4" />
+          {exporting ? "导出中..." : "导出 CSV"}
+        </button>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>

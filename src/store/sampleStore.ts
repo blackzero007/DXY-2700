@@ -11,6 +11,7 @@ interface SampleStore {
   searchQuery: string
   selectedTagId: number | null
   loading: boolean
+  exporting: boolean
   fetchSamples: (batchId?: number, tagId?: number) => Promise<void>
   searchSamples: (query: string, batchId?: number, tagId?: number) => Promise<void>
   createSample: (data: {
@@ -27,6 +28,7 @@ interface SampleStore {
   addTransition: (id: number, data: { node_name: string; operator: string; note: string }) => Promise<boolean>
   addTagToSample: (sampleId: number, tagId: number) => Promise<boolean>
   removeTagFromSample: (sampleId: number, tagId: number) => Promise<boolean>
+  exportSamples: (batchId?: number) => Promise<boolean>
   setSearchQuery: (query: string) => void
   setSelectedTagId: (tagId: number | null) => void
 }
@@ -47,6 +49,7 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
   searchQuery: "",
   selectedTagId: null,
   loading: false,
+  exporting: false,
 
   fetchSamples: async (batchId, tagId) => {
     const showToast = useToastStore.getState().showToast
@@ -199,6 +202,22 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
       const message = handleError(error, "移除标签失败")
       showToast(message, "error")
       return false
+    }
+  },
+
+  exportSamples: async (batchId) => {
+    const showToast = useToastStore.getState().showToast
+    set({ exporting: true })
+    try {
+      await api.exportSamples(get().searchQuery, batchId, get().selectedTagId)
+      showToast("导出成功", "success")
+      return true
+    } catch (error) {
+      const message = handleError(error, "导出失败")
+      showToast(message, "error")
+      return false
+    } finally {
+      set({ exporting: false })
     }
   },
 }))

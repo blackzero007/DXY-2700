@@ -132,6 +132,86 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 })
 
+router.get('/export', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const search = req.query.search as string | undefined
+    const batchId = req.query.batch_id as string | undefined
+    const tagId = req.query.tag_id as string | undefined
+    const conditions: string[] = []
+    const params: unknown[] = []
+
+    if (search) {
+      conditions.push('s.code LIKE ?')
+      params.push('%' + search + '%')
+    }
+
+    if (batchId) {
+      conditions.push('s.batch_id = ?')
+      params.push(Number(batchId))
+    }
+
+    if (tagId) {
+      conditions.push('s.id IN (SELECT sample_id FROM sample_tags WHERE tag_id = ?)')
+      params.push(Number(tagId))
+    }
+
+    let sql = 'SELECT s.*, b.name as batch_name FROM samples s LEFT JOIN batches b ON s.batch_id = b.id'
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ')
+    }
+    sql += ' ORDER BY s.created_at DESC'
+
+    const stmt = db.prepare(sql)
+    stmt.bind(params)
+
+    const samples: Record<string, unknown>[] = []
+    while (stmt.step()) {
+      const sample = stmt.getAsObject()
+      const sampleId = sample.id as number
+      const tags = getTagsForSample(sampleId)
+      const tagNames = tags.map((t) => t.name as string).join('、')
+      samples.push({ ...sample, tag_names: tagNames })
+    }
+    stmt.free()
+
+    const headers = ['编号', '名称', '类型', '来源', '状态', '批次', '标签', '创建时间', '更新时间']
+
+    function escapeCsv(cell: unknown): string {
+      const cellStr = String(cell ?? '')
+      if (cellStr.indexOf(',') >= 0 || cellStr.indexOf('"') >= 0 || cellStr.indexOf('\n') >= 0) {
+        return '"' + cellStr.replace(/"/g, '""') + '"'
+      }
+      return cellStr
+    }
+
+    const headerLine = headers.map(escapeCsv).join(',')
+
+    const lines: string[] = [headerLine]
+    for (const sample of samples) {
+      const row = [
+        sample.code,
+        sample.name,
+        sample.type,
+        sample.source,
+        sample.status,
+        sample.batch_name || '',
+        sample.tag_names,
+        sample.created_at,
+        sample.updated_at,
+      ]
+      lines.push(row.map(escapeCsv).join(','))
+    }
+
+    const csvContent = '\uFEFF' + lines.join('\n')
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+    res.setHeader('Content-Disposition', 'attachment; filename="samples.csv"')
+    res.send(csvContent)
+  } catch (error) {
+    res.status(500).json({ success: false, error: '导出样本失败' })
+  }
+})
+
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const id = Number(req.params.id)
