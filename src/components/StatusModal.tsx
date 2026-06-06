@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { X } from "lucide-react"
 import { useSampleStore } from "@/store/sampleStore"
+import { useOperatorStore } from "@/store/operatorStore"
 import { SampleStatus } from "@/types"
 import type { Sample } from "@/types"
 
@@ -14,12 +15,37 @@ interface StatusModalProps {
 
 export default function StatusModal({ sample, onClose, onSuccess }: StatusModalProps) {
   const updateSampleStatus = useSampleStore((s) => s.updateSampleStatus)
+  const { operators, fetchOperators } = useOperatorStore()
   const [status, setStatus] = useState<SampleStatus>(sample?.status ?? SampleStatus.REGISTERED)
+  const [operator, setOperator] = useState("")
+  const [note, setNote] = useState("")
+
+  useEffect(() => {
+    fetchOperators()
+  }, [fetchOperators])
+
+  useEffect(() => {
+    if (sample) {
+      setStatus(sample.status)
+      setOperator("")
+      setNote("")
+    }
+  }, [sample])
 
   if (!sample) return null
 
+  const statusChanged = sample.status !== status
+
   const handleConfirm = async () => {
-    const success = await updateSampleStatus(sample.id, status)
+    if (statusChanged && !operator.trim()) {
+      return
+    }
+    const success = await updateSampleStatus(
+      sample.id,
+      status,
+      statusChanged ? operator.trim() : undefined,
+      statusChanged ? note.trim() : undefined
+    )
     if (success) {
       onSuccess?.()
       onClose()
@@ -38,20 +64,52 @@ export default function StatusModal({ sample, onClose, onSuccess }: StatusModalP
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="px-6 py-4">
-          <p className="text-sm text-gray-500 mb-3">
+        <div className="px-6 py-4 space-y-4">
+          <p className="text-sm text-gray-500">
             样本 <span className="font-mono font-medium text-gray-700">{sample.code}</span> - {sample.name}
           </p>
-          <label className="block text-sm font-medium text-gray-600 mb-1">选择新状态</label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as SampleStatus)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm bg-white"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">选择新状态</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as SampleStatus)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm bg-white"
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          {statusChanged && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">操作人 <span className="text-red-500">*</span></label>
+                <select
+                  value={operator}
+                  onChange={(e) => setOperator(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm bg-white"
+                >
+                  <option value="">请选择操作人</option>
+                  {operators.map((op) => (
+                    <option key={op.id} value={op.name}>
+                      {op.name} ({op.employee_id})
+                      {op.team ? ` - ${op.team}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">备注</label>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm resize-none"
+                  rows={3}
+                  placeholder="输入状态变更说明"
+                />
+              </div>
+            </>
+          )}
         </div>
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
           <button
@@ -62,7 +120,8 @@ export default function StatusModal({ sample, onClose, onSuccess }: StatusModalP
           </button>
           <button
             onClick={handleConfirm}
-            className="px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors"
+            disabled={statusChanged && !operator.trim()}
+            className="px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             确认
           </button>

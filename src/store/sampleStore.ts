@@ -25,7 +25,7 @@ interface SampleStore {
     source: string
     batch_id?: number | null
   }) => Promise<boolean>
-  updateSampleStatus: (id: number, status: SampleStatus) => Promise<boolean>
+  updateSampleStatus: (id: number, status: SampleStatus, operator?: string, note?: string) => Promise<boolean>
   updateSampleBatch: (id: number, batchId: number | null) => Promise<boolean>
   deleteSample: (id: number) => Promise<boolean>
   fetchSampleDetail: (id: number) => Promise<boolean>
@@ -107,10 +107,10 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
     }
   },
 
-  updateSampleStatus: async (id, status) => {
+  updateSampleStatus: async (id, status, operator, note) => {
     const showToast = useToastStore.getState().showToast
     try {
-      await api.updateSample(id, { status })
+      await api.updateSample(id, { status, operator, note })
       await get().fetchSamples()
       showToast("状态更新成功", "success")
       return true

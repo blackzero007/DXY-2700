@@ -87,7 +87,7 @@ export async function fetchSampleById(id: number): Promise<Sample & { transition
   return handleResponse<Sample & { transitions: Transition[]; tags: Tag[]; attachments: SampleAttachment[] }>(res)
 }
 
-export async function updateSample(id: number, data: { status: SampleStatus }): Promise<Sample> {
+export async function updateSample(id: number, data: { status: SampleStatus; operator?: string; note?: string }): Promise<Sample> {
   const res = await fetch(`${API_BASE}/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },

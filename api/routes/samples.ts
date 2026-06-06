@@ -50,7 +50,7 @@ router.get('/archived', async (req: Request, res: Response): Promise<void> => {
     const params: unknown[] = [SampleStatus.ARCHIVED]
 
     if (search) {
-      conditions.push('s.code LIKE ? OR s.name LIKE ?')
+      conditions.push('(s.code LIKE ? OR s.name LIKE ?)')
       params.push(`%${search}%`, `%${search}%`)
     }
 
@@ -366,25 +366,33 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
 router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const id = Number(req.params.id)
-    const { status, batch_id } = req.body
+    const { status, batch_id, operator, note } = req.body
 
-    const checkStmt = db.prepare('SELECT id FROM samples WHERE id = ?')
+    const checkStmt = db.prepare('SELECT id, status FROM samples WHERE id = ?')
     checkStmt.bind([id])
-    if (!checkStmt.step()) {
-      checkStmt.free()
-      res.status(404).json({ success: false, error: '样本不存在' })
-      return
+    let oldSample: Record<string, unknown> | null = null
+    if (checkStmt.step()) {
+      oldSample = checkStmt.getAsObject()
     }
     checkStmt.free()
 
+    if (!oldSample) {
+      res.status(404).json({ success: false, error: '样本不存在' })
+      return
+    }
+
     const fields: string[] = []
     const values: unknown[] = []
+    let statusChanged = false
 
     if (status !== undefined) {
       const validStatuses = Object.values(SampleStatus) as string[]
       if (!validStatuses.includes(status)) {
         res.status(400).json({ success: false, error: '无效的状态值' })
         return
+      }
+      if (oldSample.status !== status) {
+        statusChanged = true
       }
       fields.push('status = ?')
       values.push(status)
@@ -410,10 +418,22 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
+    if (statusChanged && !operator) {
+      res.status(400).json({ success: false, error: '状态变更时必须提供操作人' })
+      return
+    }
+
     fields.push('updated_at = datetime(\'now\',\'localtime\')')
     values.push(id)
 
     db.run(`UPDATE samples SET ${fields.join(', ')} WHERE id = ?`, values)
+
+    if (statusChanged && operator) {
+      db.run(
+        'INSERT INTO transitions (sample_id, node_name, operator, note) VALUES (?, ?, ?, ?)',
+        [id, status, operator, note || '']
+      )
+    }
 
     saveDb()
 
