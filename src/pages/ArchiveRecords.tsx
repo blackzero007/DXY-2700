@@ -142,7 +142,7 @@ export default function ArchiveRecords() {
             type="text"
             value={searchText}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="搜索样本编号、名称..."
+            placeholder="搜索样本编号、名称、类型、来源..."
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white"
           />
         </div>

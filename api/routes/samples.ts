@@ -50,8 +50,8 @@ router.get('/archived', async (req: Request, res: Response): Promise<void> => {
     const params: unknown[] = [SampleStatus.ARCHIVED]
 
     if (search) {
-      conditions.push('(s.code LIKE ? OR s.name LIKE ?)')
-      params.push(`%${search}%`, `%${search}%`)
+      conditions.push('(s.code LIKE ? OR s.name LIKE ? OR s.type LIKE ? OR s.source LIKE ?)')
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`)
     }
 
     const sql = `
@@ -154,8 +154,8 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     const params: unknown[] = []
 
     if (search) {
-      conditions.push('s.code LIKE ?')
-      params.push(`%${search}%`)
+      conditions.push('(s.code LIKE ? OR s.name LIKE ? OR s.type LIKE ? OR s.source LIKE ?)')
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`)
     }
 
     if (batchId) {
@@ -258,8 +258,8 @@ router.get('/export', async (req: Request, res: Response): Promise<void> => {
     const params: unknown[] = []
 
     if (search) {
-      conditions.push('s.code LIKE ?')
-      params.push('%' + search + '%')
+      conditions.push('(s.code LIKE ? OR s.name LIKE ? OR s.type LIKE ? OR s.source LIKE ?)')
+      params.push('%' + search + '%', '%' + search + '%', '%' + search + '%', '%' + search + '%')
     }
 
     if (batchId) {
