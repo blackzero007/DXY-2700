@@ -96,3 +96,12 @@ export interface SampleExceptionWithSample extends SampleException {
   sample_code: string
   sample_name: string
 }
+
+export interface Operator {
+  id: number
+  name: string
+  employee_id: string
+  team: string
+  created_at: string
+  updated_at: string
+}

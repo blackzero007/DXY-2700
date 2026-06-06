@@ -5,6 +5,7 @@ import Batches from "@/pages/Batches"
 import BatchDetail from "@/pages/BatchDetail"
 import Tags from "@/pages/Tags"
 import Exceptions from "@/pages/Exceptions"
+import Operators from "@/pages/Operators"
 import ToastContainer from "@/components/ToastContainer"
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/batch/:id" element={<BatchDetail />} />
         <Route path="/tags" element={<Tags />} />
         <Route path="/exceptions" element={<Exceptions />} />
+        <Route path="/operators" element={<Operators />} />
       </Routes>
       <ToastContainer />
     </Router>

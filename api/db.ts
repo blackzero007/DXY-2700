@@ -132,6 +132,18 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sample_exceptions_sample_id ON sample_exceptions(sample_id);
   CREATE INDEX IF NOT EXISTS idx_sample_exceptions_status ON sample_exceptions(status);
   CREATE INDEX IF NOT EXISTS idx_sample_exceptions_type ON sample_exceptions(type);
+
+  CREATE TABLE IF NOT EXISTS operators (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    employee_id TEXT NOT NULL UNIQUE,
+    team TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_operators_employee_id ON operators(employee_id);
+  CREATE INDEX IF NOT EXISTS idx_operators_team ON operators(team);
 `)
 
 const tagCheck = db.exec("SELECT COUNT(*) as count FROM tags")
@@ -150,6 +162,26 @@ if (tagCount === 0) {
     insertTag.run([tag.name, tag.color, tag.description])
   })
   insertTag.free()
+  saveDb()
+}
+
+const operatorCheck = db.exec("SELECT COUNT(*) as count FROM operators")
+const operatorCount = operatorCheck[0]?.values[0]?.[0] as number || 0
+
+if (operatorCount === 0) {
+  const defaultOperators = [
+    { name: '张伟', employee_id: 'EMP001', team: '分子生物学组' },
+    { name: '李娜', employee_id: 'EMP002', team: '分子生物学组' },
+    { name: '王强', employee_id: 'EMP003', team: '细胞生物学组' },
+    { name: '刘洋', employee_id: 'EMP004', team: '细胞生物学组' },
+    { name: '陈静', employee_id: 'EMP005', team: '分析测试组' },
+  ]
+
+  const insertOperator = db.prepare('INSERT INTO operators (name, employee_id, team) VALUES (?, ?, ?)')
+  defaultOperators.forEach(op => {
+    insertOperator.run([op.name, op.employee_id, op.team])
+  })
+  insertOperator.free()
   saveDb()
 }
 
