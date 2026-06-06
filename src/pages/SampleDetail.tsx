@@ -99,12 +99,6 @@ export default function SampleDetail() {
     fetchTags()
   }, [id, fetchSampleDetail, fetchExceptions, fetchTags])
 
-  useEffect(() => {
-    if (id) {
-      fetchExceptions(Number(id))
-    }
-  }, [id, fetchExceptions])
-
   const availableTags = tags.filter(
     (tag) => !currentSample?.tags?.find((t) => t.id === tag.id)
   )

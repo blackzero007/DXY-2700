@@ -247,6 +247,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     checkStmt.free()
 
     db.run('DELETE FROM transitions WHERE sample_id = ?', [id])
+    db.run('DELETE FROM sample_exceptions WHERE sample_id = ?', [id])
     db.run('DELETE FROM samples WHERE id = ?', [id])
 
     saveDb()

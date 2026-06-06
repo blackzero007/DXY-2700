@@ -54,10 +54,11 @@ export const useExceptionStore = create<ExceptionStore>((set, get) => ({
     set({ loading: true })
     try {
       const { filterType, filterStatus } = get()
+      const useFilters = sampleId === undefined
       const exceptions = await api.fetchExceptions({
         sample_id: sampleId,
-        type: filterType ?? undefined,
-        status: filterStatus ?? undefined,
+        type: useFilters ? filterType ?? undefined : undefined,
+        status: useFilters ? filterStatus ?? undefined : undefined,
       })
       set({ exceptions })
     } catch (error) {
