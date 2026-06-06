@@ -150,6 +150,8 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     const search = req.query.search as string | undefined
     const batchId = req.query.batch_id as string | undefined
     const tagId = req.query.tag_id as string | undefined
+    const status = req.query.status as string | undefined
+    const sampleType = req.query.sample_type as string | undefined
     const conditions: string[] = []
     const params: unknown[] = []
 
@@ -166,6 +168,16 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     if (tagId) {
       conditions.push('s.id IN (SELECT sample_id FROM sample_tags WHERE tag_id = ?)')
       params.push(Number(tagId))
+    }
+
+    if (status) {
+      conditions.push('s.status = ?')
+      params.push(status)
+    }
+
+    if (sampleType) {
+      conditions.push('s.type = ?')
+      params.push(sampleType)
     }
 
     let sql = 'SELECT s.* FROM samples s'
@@ -254,6 +266,8 @@ router.get('/export', async (req: Request, res: Response): Promise<void> => {
     const search = req.query.search as string | undefined
     const batchId = req.query.batch_id as string | undefined
     const tagId = req.query.tag_id as string | undefined
+    const status = req.query.status as string | undefined
+    const sampleType = req.query.sample_type as string | undefined
     const conditions: string[] = []
     const params: unknown[] = []
 
@@ -270,6 +284,16 @@ router.get('/export', async (req: Request, res: Response): Promise<void> => {
     if (tagId) {
       conditions.push('s.id IN (SELECT sample_id FROM sample_tags WHERE tag_id = ?)')
       params.push(Number(tagId))
+    }
+
+    if (status) {
+      conditions.push('s.status = ?')
+      params.push(status)
+    }
+
+    if (sampleType) {
+      conditions.push('s.type = ?')
+      params.push(sampleType)
     }
 
     let sql = 'SELECT s.*, b.name as batch_name FROM samples s LEFT JOIN batches b ON s.batch_id = b.id'

@@ -11,13 +11,15 @@ interface SampleStore {
   currentSample: (Sample & { transitions: Transition[]; tags: Tag[]; attachments: SampleAttachment[] }) | null
   searchQuery: string
   selectedTagId: number | null
+  selectedStatus: string | null
+  selectedSampleType: string | null
   loading: boolean
   archivedLoading: boolean
   exporting: boolean
   stats: SampleStats | null
   statsLoading: boolean
-  fetchSamples: (batchId?: number, tagId?: number) => Promise<void>
-  searchSamples: (query: string, batchId?: number, tagId?: number) => Promise<void>
+  fetchSamples: (batchId?: number, tagId?: number, status?: string, sampleType?: string) => Promise<void>
+  searchSamples: (query: string, batchId?: number, tagId?: number, status?: string, sampleType?: string) => Promise<void>
   createSample: (data: {
     code: string
     name: string
@@ -38,6 +40,8 @@ interface SampleStore {
   exportSamples: (batchId?: number) => Promise<boolean>
   setSearchQuery: (query: string) => void
   setSelectedTagId: (tagId: number | null) => void
+  setSelectedStatus: (status: string | null) => void
+  setSelectedSampleType: (sampleType: string | null) => void
   fetchSampleStats: () => Promise<void>
   fetchArchivedSamples: (search?: string) => Promise<void>
   searchArchivedSamples: (query: string) => Promise<void>
@@ -59,17 +63,19 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
   currentSample: null,
   searchQuery: "",
   selectedTagId: null,
+  selectedStatus: null,
+  selectedSampleType: null,
   loading: false,
   archivedLoading: false,
   exporting: false,
   stats: null,
   statsLoading: false,
 
-  fetchSamples: async (batchId, tagId) => {
+  fetchSamples: async (batchId, tagId, status, sampleType) => {
     const showToast = useToastStore.getState().showToast
     set({ loading: true })
     try {
-      const samples = await api.fetchSamples(undefined, batchId, tagId)
+      const samples = await api.fetchSamples(undefined, batchId, tagId, status, sampleType)
       set({ samples })
     } catch (error) {
       const message = handleError(error, "加载样本列表失败")
@@ -79,11 +85,11 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
     }
   },
 
-  searchSamples: async (query, batchId, tagId) => {
+  searchSamples: async (query, batchId, tagId, status, sampleType) => {
     const showToast = useToastStore.getState().showToast
     set({ searchQuery: query, loading: true })
     try {
-      const samples = await api.fetchSamples(query, batchId, tagId)
+      const samples = await api.fetchSamples(query, batchId, tagId, status, sampleType)
       set({ samples })
     } catch (error) {
       const message = handleError(error, "搜索样本失败")
@@ -183,6 +189,10 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
 
   setSelectedTagId: (tagId) => set({ selectedTagId: tagId }),
 
+  setSelectedStatus: (status) => set({ selectedStatus: status }),
+
+  setSelectedSampleType: (sampleType) => set({ selectedSampleType: sampleType }),
+
   addTagToSample: async (sampleId, tagId) => {
     const showToast = useToastStore.getState().showToast
     try {
@@ -191,7 +201,13 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
       if (currentSample && currentSample.id === sampleId) {
         set({ currentSample: { ...currentSample, tags } })
       }
-      await get().searchSamples(get().searchQuery, undefined, get().selectedTagId)
+      await get().searchSamples(
+        get().searchQuery,
+        undefined,
+        get().selectedTagId,
+        get().selectedStatus,
+        get().selectedSampleType
+      )
       showToast("标签添加成功", "success")
       return true
     } catch (error) {
@@ -209,7 +225,13 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
       if (currentSample && currentSample.id === sampleId) {
         set({ currentSample: { ...currentSample, tags } })
       }
-      await get().searchSamples(get().searchQuery, undefined, get().selectedTagId)
+      await get().searchSamples(
+        get().searchQuery,
+        undefined,
+        get().selectedTagId,
+        get().selectedStatus,
+        get().selectedSampleType
+      )
       showToast("标签移除成功", "success")
       return true
     } catch (error) {
@@ -277,7 +299,13 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
     const showToast = useToastStore.getState().showToast
     set({ exporting: true })
     try {
-      await api.exportSamples(get().searchQuery, batchId, get().selectedTagId)
+      await api.exportSamples(
+        get().searchQuery,
+        batchId,
+        get().selectedTagId,
+        get().selectedStatus,
+        get().selectedSampleType
+      )
       showToast("导出成功", "success")
       return true
     } catch (error) {

@@ -40,11 +40,19 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return json.data
 }
 
-export async function fetchSamples(search?: string, batchId?: number | null, tagId?: number | null): Promise<Sample[]> {
+export async function fetchSamples(
+  search?: string,
+  batchId?: number | null,
+  tagId?: number | null,
+  status?: string | null,
+  sampleType?: string | null
+): Promise<Sample[]> {
   const params = new URLSearchParams()
   if (search) params.set("search", search)
   if (batchId != null) params.set("batch_id", String(batchId))
   if (tagId != null) params.set("tag_id", String(tagId))
+  if (status) params.set("status", status)
+  if (sampleType) params.set("sample_type", sampleType)
   const query = params.toString() ? `?${params.toString()}` : ""
   const res = await fetch(`${API_BASE}${query}`)
   return handleResponse<Sample[]>(res)
@@ -132,11 +140,19 @@ export async function removeTagFromSample(sampleId: number, tagId: number): Prom
   return handleResponse<Tag[]>(res)
 }
 
-export async function exportSamples(search?: string, batchId?: number | null, tagId?: number | null): Promise<void> {
+export async function exportSamples(
+  search?: string,
+  batchId?: number | null,
+  tagId?: number | null,
+  status?: string | null,
+  sampleType?: string | null
+): Promise<void> {
   const params = new URLSearchParams()
   if (search) params.set("search", search)
   if (batchId != null) params.set("batch_id", String(batchId))
   if (tagId != null) params.set("tag_id", String(tagId))
+  if (status) params.set("status", status)
+  if (sampleType) params.set("sample_type", sampleType)
   const query = params.toString() ? `?${params.toString()}` : ""
 
   const res = await fetch(`${API_BASE}/export${query}`)
