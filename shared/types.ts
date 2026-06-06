@@ -209,3 +209,46 @@ export interface UpdateSampleTypeRequest {
   description?: string
   sort_order?: number
 }
+
+export enum SourceUnitType {
+  HOSPITAL = "医院",
+  DEPARTMENT = "科室",
+  PARTNER = "合作机构",
+  OTHER = "其他",
+}
+
+export interface SourceUnit {
+  id: number
+  name: string
+  type: string
+  code: string | null
+  contact_person: string
+  contact_phone: string
+  address: string
+  description: string
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateSourceUnitRequest {
+  name: string
+  type?: string
+  code?: string
+  contact_person?: string
+  contact_phone?: string
+  address?: string
+  description?: string
+  sort_order?: number
+}
+
+export interface UpdateSourceUnitRequest {
+  name?: string
+  type?: string
+  code?: string
+  contact_person?: string
+  contact_phone?: string
+  address?: string
+  description?: string
+  sort_order?: number
+}

@@ -3,6 +3,7 @@ import { Plus, FlaskConical } from "lucide-react"
 import { useSampleStore } from "@/store/sampleStore"
 import { useBatchStore } from "@/store/batchStore"
 import { useSampleTypeStore } from "@/store/sampleTypeStore"
+import { useSourceUnitStore } from "@/store/sourceUnitStore"
 
 export default function SampleForm() {
   const createSample = useSampleStore((s) => s.createSample)
@@ -10,22 +11,35 @@ export default function SampleForm() {
   const fetchBatches = useBatchStore((s) => s.fetchBatches)
   const sampleTypes = useSampleTypeStore((s) => s.sampleTypes)
   const fetchSampleTypes = useSampleTypeStore((s) => s.fetchSampleTypes)
+  const sourceUnits = useSourceUnitStore((s) => s.sourceUnits)
+  const fetchSourceUnits = useSourceUnitStore((s) => s.fetchSourceUnits)
   const [code, setCode] = useState("")
   const [name, setName] = useState("")
   const [type, setType] = useState("")
   const [source, setSource] = useState("")
+  const [sourceUnitId, setSourceUnitId] = useState<string>("")
   const [batchId, setBatchId] = useState<string>("")
 
   useEffect(() => {
     fetchBatches()
     fetchSampleTypes()
-  }, [fetchBatches, fetchSampleTypes])
+    fetchSourceUnits()
+  }, [fetchBatches, fetchSampleTypes, fetchSourceUnits])
 
   useEffect(() => {
     if (sampleTypes.length > 0 && !type) {
       setType(sampleTypes[0].name)
     }
   }, [sampleTypes, type])
+
+  useEffect(() => {
+    if (sourceUnitId) {
+      const unit = sourceUnits.find((u) => u.id === Number(sourceUnitId))
+      if (unit) {
+        setSource(unit.name)
+      }
+    }
+  }, [sourceUnitId, sourceUnits])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,6 +56,7 @@ export default function SampleForm() {
       setName("")
       setType(sampleTypes[0]?.name || "")
       setSource("")
+      setSourceUnitId("")
       setBatchId("")
     }
   }
@@ -103,13 +118,28 @@ export default function SampleForm() {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">来源</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1">来源单位</label>
+          <select
+            value={sourceUnitId}
+            onChange={(e) => setSourceUnitId(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm bg-white"
+          >
+            <option value="">请选择来源单位</option>
+            {sourceUnits.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.name} ({unit.type})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-1">来源详情</label>
           <input
             type="text"
             value={source}
             onChange={(e) => setSource(e.target.value)}
             className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
-            placeholder="输入样本来源"
+            placeholder="或手动输入来源信息"
           />
         </div>
         <button

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { FlaskConical, Package, Tag, AlertTriangle, Users, List } from "lucide-react"
+import { FlaskConical, Package, Tag, AlertTriangle, Users, List, Building2 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useSampleStore } from "@/store/sampleStore"
 import SampleForm from "@/components/SampleForm"
@@ -70,6 +70,13 @@ export default function Home() {
             >
               <Users className="w-4 h-4" />
               人员管理
+            </Link>
+            <Link
+              to="/source-units"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-2"
+            >
+              <Building2 className="w-4 h-4" />
+              来源单位
             </Link>
           </nav>
         </div>

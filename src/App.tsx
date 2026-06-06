@@ -7,6 +7,7 @@ import Tags from "@/pages/Tags"
 import SampleTypes from "@/pages/SampleTypes"
 import Exceptions from "@/pages/Exceptions"
 import Operators from "@/pages/Operators"
+import SourceUnits from "@/pages/SourceUnits"
 import ToastContainer from "@/components/ToastContainer"
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/sample-types" element={<SampleTypes />} />
         <Route path="/exceptions" element={<Exceptions />} />
         <Route path="/operators" element={<Operators />} />
+        <Route path="/source-units" element={<SourceUnits />} />
       </Routes>
       <ToastContainer />
     </Router>

@@ -13,6 +13,7 @@ import tagRoutes from './routes/tags.js'
 import exceptionRoutes from './routes/exceptions.js'
 import operatorRoutes from './routes/operators.js'
 import sampleTypeRoutes from './routes/sampleTypes.js'
+import sourceUnitRoutes from './routes/sourceUnits.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -31,6 +32,7 @@ app.use('/api/tags', tagRoutes)
 app.use('/api/exceptions', exceptionRoutes)
 app.use('/api/operators', operatorRoutes)
 app.use('/api/sample-types', sampleTypeRoutes)
+app.use('/api/source-units', sourceUnitRoutes)
 
 app.use(
   '/api/health',
