@@ -1,8 +1,9 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { X, CheckCircle } from "lucide-react"
 import { ExceptionStatus, ExceptionType } from "@/types"
 import type { SampleExceptionWithSample } from "@/types"
 import { useExceptionStore } from "@/store/exceptionStore"
+import { useOperatorStore } from "@/store/operatorStore"
 
 const STATUS_OPTIONS = Object.values(ExceptionStatus)
 const EXCEPTION_TYPE_OPTIONS = Object.values(ExceptionType)
@@ -14,6 +15,7 @@ interface ExceptionResolveFormProps {
 
 export default function ExceptionResolveForm({ exception, onClose }: ExceptionResolveFormProps) {
   const updateException = useExceptionStore((s) => s.updateException)
+  const { operators, fetchOperators } = useOperatorStore()
   const [type, setType] = useState<ExceptionType>(exception.type)
   const [title, setTitle] = useState(exception.title)
   const [description, setDescription] = useState(exception.description)
@@ -21,6 +23,10 @@ export default function ExceptionResolveForm({ exception, onClose }: ExceptionRe
   const [handler, setHandler] = useState(exception.handler || "")
   const [resolution, setResolution] = useState(exception.resolution || "")
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    fetchOperators()
+  }, [fetchOperators])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -106,13 +112,19 @@ export default function ExceptionResolveForm({ exception, onClose }: ExceptionRe
 
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-1">处理人</label>
-            <input
-              type="text"
+            <select
               value={handler}
               onChange={(e) => setHandler(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
-              placeholder="输入处理人姓名"
-            />
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm bg-white"
+            >
+              <option value="">请选择处理人</option>
+              {operators.map((op) => (
+                <option key={op.id} value={op.name}>
+                  {op.name} ({op.employee_id})
+                  {op.team ? ` - ${op.team}` : ""}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

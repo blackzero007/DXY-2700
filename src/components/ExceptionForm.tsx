@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Plus, X } from "lucide-react"
 import { useExceptionStore } from "@/store/exceptionStore"
+import { useOperatorStore } from "@/store/operatorStore"
 import { ExceptionType } from "@/types"
 
 interface ExceptionFormProps {
@@ -13,11 +14,16 @@ const EXCEPTION_TYPE_OPTIONS = Object.values(ExceptionType)
 
 export default function ExceptionForm({ sampleId, sampleCode, onClose }: ExceptionFormProps) {
   const createException = useExceptionStore((s) => s.createException)
+  const { operators, fetchOperators } = useOperatorStore()
   const [type, setType] = useState<ExceptionType>(ExceptionType.CONTAMINATION)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [reporter, setReporter] = useState("")
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    fetchOperators()
+  }, [fetchOperators])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -96,14 +102,20 @@ export default function ExceptionForm({ sampleId, sampleCode, onClose }: Excepti
           <label className="block text-sm font-medium text-gray-600 mb-1">
             报告人 <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
+          <select
             value={reporter}
             onChange={(e) => setReporter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
-            placeholder="输入报告人姓名"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm bg-white"
             required
-          />
+          >
+            <option value="">请选择报告人</option>
+            {operators.map((op) => (
+              <option key={op.id} value={op.name}>
+                {op.name} ({op.employee_id})
+                {op.team ? ` - ${op.team}` : ""}
+              </option>
+            ))}
+          </select>
         </div>
         <button
           type="submit"

@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Plus } from "lucide-react"
 import { useSampleStore } from "@/store/sampleStore"
+import { useOperatorStore } from "@/store/operatorStore"
 
 interface TransitionFormProps {
   sampleId: number
@@ -8,9 +9,14 @@ interface TransitionFormProps {
 
 export default function TransitionForm({ sampleId }: TransitionFormProps) {
   const addTransition = useSampleStore((s) => s.addTransition)
+  const { operators, fetchOperators } = useOperatorStore()
   const [nodeName, setNodeName] = useState("")
   const [operator, setOperator] = useState("")
   const [note, setNote] = useState("")
+
+  useEffect(() => {
+    fetchOperators()
+  }, [fetchOperators])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,14 +50,20 @@ export default function TransitionForm({ sampleId }: TransitionFormProps) {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-600 mb-1">操作人</label>
-          <input
-            type="text"
+          <select
             value={operator}
             onChange={(e) => setOperator(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm"
-            placeholder="输入操作人"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm bg-white"
             required
-          />
+          >
+            <option value="">请选择操作人</option>
+            {operators.map((op) => (
+              <option key={op.id} value={op.name}>
+                {op.name} ({op.employee_id})
+                {op.team ? ` - ${op.team}` : ""}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-600 mb-1">备注</label>
