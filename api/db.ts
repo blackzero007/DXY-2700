@@ -112,6 +112,26 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
   CREATE INDEX IF NOT EXISTS idx_sample_tags_sample_id ON sample_tags(sample_id);
   CREATE INDEX IF NOT EXISTS idx_sample_tags_tag_id ON sample_tags(tag_id);
+
+  CREATE TABLE IF NOT EXISTS sample_exceptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sample_id INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT '待处理',
+    reporter TEXT NOT NULL,
+    handler TEXT,
+    resolution TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    resolved_at TEXT,
+    FOREIGN KEY (sample_id) REFERENCES samples(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sample_exceptions_sample_id ON sample_exceptions(sample_id);
+  CREATE INDEX IF NOT EXISTS idx_sample_exceptions_status ON sample_exceptions(status);
+  CREATE INDEX IF NOT EXISTS idx_sample_exceptions_type ON sample_exceptions(type);
 `)
 
 const tagCheck = db.exec("SELECT COUNT(*) as count FROM tags")

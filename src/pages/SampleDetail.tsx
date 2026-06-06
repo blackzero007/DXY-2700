@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, FlaskConical, FileText, Clock, Tag as TagIcon, X, Plus } from "lucide-react"
+import { ArrowLeft, FlaskConical, FileText, Clock, Tag as TagIcon, X, Plus, AlertTriangle } from "lucide-react"
 import { useSampleStore } from "@/store/sampleStore"
+import { useExceptionStore } from "@/store/exceptionStore"
 import { useTagStore } from "@/store/tagStore"
-import { SampleStatus } from "@/types"
-import type { Tag } from "@/types"
+import { SampleStatus, ExceptionStatus, ExceptionType } from "@/types"
+import type { Tag, SampleExceptionWithSample } from "@/types"
 import TransitionTimeline from "@/components/TransitionTimeline"
 import TransitionForm from "@/components/TransitionForm"
+import ExceptionForm from "@/components/ExceptionForm"
+import ExceptionResolveForm from "@/components/ExceptionResolveForm"
+import ConfirmModal from "@/components/ConfirmModal"
 
 const STATUS_COLORS: Record<SampleStatus, string> = {
   [SampleStatus.REGISTERED]: "bg-blue-100 text-blue-700",
@@ -14,6 +18,21 @@ const STATUS_COLORS: Record<SampleStatus, string> = {
   [SampleStatus.COMPLETED]: "bg-green-100 text-green-700",
   [SampleStatus.ARCHIVED]: "bg-gray-100 text-gray-600",
   [SampleStatus.DISCARDED]: "bg-red-100 text-red-700",
+}
+
+const EXCEPTION_STATUS_COLORS: Record<ExceptionStatus, string> = {
+  [ExceptionStatus.OPEN]: "bg-red-100 text-red-700",
+  [ExceptionStatus.IN_PROGRESS]: "bg-blue-100 text-blue-700",
+  [ExceptionStatus.RESOLVED]: "bg-green-100 text-green-700",
+  [ExceptionStatus.CLOSED]: "bg-gray-100 text-gray-500",
+}
+
+const EXCEPTION_TYPE_COLORS: Record<ExceptionType, string> = {
+  [ExceptionType.CONTAMINATION]: "bg-red-100 text-red-700",
+  [ExceptionType.DAMAGE]: "bg-orange-100 text-orange-700",
+  [ExceptionType.INFO_MISSING]: "bg-yellow-100 text-yellow-700",
+  [ExceptionType.RESULT_ABNORMAL]: "bg-purple-100 text-purple-700",
+  [ExceptionType.OTHER]: "bg-gray-100 text-gray-600",
 }
 
 function TagBadge({ tag, onRemove }: { tag: Tag; onRemove?: () => void }) {
@@ -38,6 +57,23 @@ function TagBadge({ tag, onRemove }: { tag: Tag; onRemove?: () => void }) {
   )
 }
 
+function ExceptionBadge({ exc }: { exc: SampleExceptionWithSample }) {
+  return (
+    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+      <span className={`px-2 py-0.5 rounded text-xs font-medium ${EXCEPTION_TYPE_COLORS[exc.type]}`}>
+        {exc.type}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-gray-800 truncate">{exc.title}</p>
+        <p className="text-xs text-gray-400">{exc.reporter} · {new Date(exc.created_at).toLocaleString("zh-CN")}</p>
+      </div>
+      <span className={`px-2 py-0.5 rounded text-xs font-medium ${EXCEPTION_STATUS_COLORS[exc.status]}`}>
+        {exc.status}
+      </span>
+    </div>
+  )
+}
+
 export default function SampleDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -47,12 +83,27 @@ export default function SampleDetail() {
   const removeTagFromSample = useSampleStore((s) => s.removeTagFromSample)
   const loading = useSampleStore((s) => s.loading)
   const { tags, fetchTags } = useTagStore()
+  const exceptions = useExceptionStore((s) => s.exceptions)
+  const fetchExceptions = useExceptionStore((s) => s.fetchExceptions)
+  const deleteException = useExceptionStore((s) => s.deleteException)
   const [showTagSelector, setShowTagSelector] = useState(false)
+  const [showExceptionForm, setShowExceptionForm] = useState(false)
+  const [editException, setEditException] = useState<SampleExceptionWithSample | null>(null)
+  const [deleteExceptionTarget, setDeleteExceptionTarget] = useState<SampleExceptionWithSample | null>(null)
 
   useEffect(() => {
-    if (id) fetchSampleDetail(Number(id))
+    if (id) {
+      fetchSampleDetail(Number(id))
+      fetchExceptions(Number(id))
+    }
     fetchTags()
-  }, [id, fetchSampleDetail, fetchTags])
+  }, [id, fetchSampleDetail, fetchExceptions, fetchTags])
+
+  useEffect(() => {
+    if (id) {
+      fetchExceptions(Number(id))
+    }
+  }, [id, fetchExceptions])
 
   const availableTags = tags.filter(
     (tag) => !currentSample?.tags?.find((t) => t.id === tag.id)
@@ -68,6 +119,15 @@ export default function SampleDetail() {
   const handleRemoveTag = (tagId: number) => {
     if (id) {
       removeTagFromSample(Number(id), tagId)
+    }
+  }
+
+  const handleDeleteException = async () => {
+    if (!deleteExceptionTarget) return
+    const success = await deleteException(deleteExceptionTarget.id)
+    if (success) {
+      setDeleteExceptionTarget(null)
+      if (id) fetchExceptions(Number(id))
     }
   }
 
@@ -196,6 +256,57 @@ export default function SampleDetail() {
           </div>
         </div>
 
+        {/* 异常记录 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              <h3 className="text-lg font-semibold text-gray-800">异常记录</h3>
+            </div>
+            <button
+              onClick={() => setShowExceptionForm(!showExceptionForm)}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              登记异常
+            </button>
+          </div>
+
+          {showExceptionForm && (
+            <div className="mb-4">
+              <ExceptionForm
+                sampleId={currentSample.id}
+                sampleCode={currentSample.code}
+                onClose={() => setShowExceptionForm(false)}
+              />
+            </div>
+          )}
+
+          {exceptions.length > 0 ? (
+            <div className="space-y-2">
+              {exceptions.map((exc) => (
+                <div key={exc.id} className="group relative">
+                  <button
+                    onClick={() => setEditException(exc)}
+                    className="w-full text-left"
+                  >
+                    <ExceptionBadge exc={exc} />
+                  </button>
+                  <button
+                    onClick={() => setDeleteExceptionTarget(exc)}
+                    className="absolute top-2 right-2 p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="删除"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-300 text-center py-4">暂无异常记录</p>
+          )}
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">流转记录</h3>
           <TransitionTimeline transitions={currentSample.transitions} />
@@ -203,6 +314,27 @@ export default function SampleDetail() {
 
         <TransitionForm sampleId={currentSample.id} />
       </main>
+
+      {editException && (
+        <ExceptionResolveForm
+          exception={editException}
+          onClose={() => {
+            setEditException(null)
+            if (id) fetchExceptions(Number(id))
+          }}
+        />
+      )}
+
+      <ConfirmModal
+        open={!!deleteExceptionTarget}
+        title="删除异常记录"
+        message={`确定要删除异常记录 "${deleteExceptionTarget?.title}" 吗？此操作不可撤销。`}
+        confirmText="确认删除"
+        cancelText="取消"
+        variant="danger"
+        onClose={() => setDeleteExceptionTarget(null)}
+        onConfirm={handleDeleteException}
+      />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { FlaskConical, Package, Tag } from "lucide-react"
+import { FlaskConical, Package, Tag, AlertTriangle } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useSampleStore } from "@/store/sampleStore"
 import SampleForm from "@/components/SampleForm"
@@ -46,6 +46,13 @@ export default function Home() {
             >
               <Tag className="w-4 h-4" />
               标签管理
+            </Link>
+            <Link
+              to="/exceptions"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-2"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              异常管理
             </Link>
           </nav>
         </div>
