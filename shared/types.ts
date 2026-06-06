@@ -188,3 +188,24 @@ export interface SampleStats {
   completed: number
   discarded: number
 }
+
+export interface SampleType {
+  id: number
+  name: string
+  description: string
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateSampleTypeRequest {
+  name: string
+  description?: string
+  sort_order?: number
+}
+
+export interface UpdateSampleTypeRequest {
+  name?: string
+  description?: string
+  sort_order?: number
+}

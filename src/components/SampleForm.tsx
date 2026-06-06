@@ -2,22 +2,30 @@ import { useState, useEffect } from "react"
 import { Plus, FlaskConical } from "lucide-react"
 import { useSampleStore } from "@/store/sampleStore"
 import { useBatchStore } from "@/store/batchStore"
-
-const SAMPLE_TYPES = ["血液", "尿液", "组织", "细胞", "其他"]
+import { useSampleTypeStore } from "@/store/sampleTypeStore"
 
 export default function SampleForm() {
   const createSample = useSampleStore((s) => s.createSample)
   const batches = useBatchStore((s) => s.batches)
   const fetchBatches = useBatchStore((s) => s.fetchBatches)
+  const sampleTypes = useSampleTypeStore((s) => s.sampleTypes)
+  const fetchSampleTypes = useSampleTypeStore((s) => s.fetchSampleTypes)
   const [code, setCode] = useState("")
   const [name, setName] = useState("")
-  const [type, setType] = useState(SAMPLE_TYPES[0])
+  const [type, setType] = useState("")
   const [source, setSource] = useState("")
   const [batchId, setBatchId] = useState<string>("")
 
   useEffect(() => {
     fetchBatches()
-  }, [fetchBatches])
+    fetchSampleTypes()
+  }, [fetchBatches, fetchSampleTypes])
+
+  useEffect(() => {
+    if (sampleTypes.length > 0 && !type) {
+      setType(sampleTypes[0].name)
+    }
+  }, [sampleTypes, type])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,7 +40,7 @@ export default function SampleForm() {
     if (success) {
       setCode("")
       setName("")
-      setType(SAMPLE_TYPES[0])
+      setType(sampleTypes[0]?.name || "")
       setSource("")
       setBatchId("")
     }
@@ -74,8 +82,8 @@ export default function SampleForm() {
             onChange={(e) => setType(e.target.value)}
             className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm bg-white"
           >
-            {SAMPLE_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
+            {sampleTypes.map((t) => (
+              <option key={t.id} value={t.name}>{t.name}</option>
             ))}
           </select>
         </div>

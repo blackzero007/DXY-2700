@@ -144,6 +144,18 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_operators_employee_id ON operators(employee_id);
   CREATE INDEX IF NOT EXISTS idx_operators_team ON operators(team);
+
+  CREATE TABLE IF NOT EXISTS sample_types (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT DEFAULT '',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sample_types_name ON sample_types(name);
+  CREATE INDEX IF NOT EXISTS idx_sample_types_sort_order ON sample_types(sort_order);
 `)
 
 const tagCheck = db.exec("SELECT COUNT(*) as count FROM tags")
@@ -182,6 +194,28 @@ if (operatorCount === 0) {
     insertOperator.run([op.name, op.employee_id, op.team])
   })
   insertOperator.free()
+  saveDb()
+}
+
+const sampleTypeCheck = db.exec("SELECT COUNT(*) as count FROM sample_types")
+const sampleTypeCount = sampleTypeCheck[0]?.values[0]?.[0] as number || 0
+
+if (sampleTypeCount === 0) {
+  const defaultSampleTypes = [
+    { name: '血液', description: '血液样本', sort_order: 1 },
+    { name: '尿液', description: '尿液样本', sort_order: 2 },
+    { name: '组织', description: '组织样本', sort_order: 3 },
+    { name: '细胞', description: '细胞样本', sort_order: 4 },
+    { name: '唾液', description: '唾液样本', sort_order: 5 },
+    { name: '脑脊液', description: '脑脊液样本', sort_order: 6 },
+    { name: '其他', description: '其他类型样本', sort_order: 99 },
+  ]
+
+  const insertSampleType = db.prepare('INSERT INTO sample_types (name, description, sort_order) VALUES (?, ?, ?)')
+  defaultSampleTypes.forEach(st => {
+    insertSampleType.run([st.name, st.description, st.sort_order])
+  })
+  insertSampleType.free()
   saveDb()
 }
 
