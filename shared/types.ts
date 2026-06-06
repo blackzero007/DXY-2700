@@ -180,3 +180,11 @@ export interface UpdateOperatorRequest {
   employee_id?: string
   team?: string
 }
+
+export interface SampleStats {
+  total: number
+  statusCounts: Record<SampleStatus, number>
+  todayNew: number
+  completed: number
+  discarded: number
+}

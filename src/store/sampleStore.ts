@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import type { Sample, Transition, Tag } from "@/types"
+import type { Sample, Transition, Tag, SampleStats } from "@/types"
 import { SampleStatus } from "@/types"
 import * as api from "@/api/samples"
 import { ApiError } from "@/api/samples"
@@ -12,6 +12,8 @@ interface SampleStore {
   selectedTagId: number | null
   loading: boolean
   exporting: boolean
+  stats: SampleStats | null
+  statsLoading: boolean
   fetchSamples: (batchId?: number, tagId?: number) => Promise<void>
   searchSamples: (query: string, batchId?: number, tagId?: number) => Promise<void>
   createSample: (data: {
@@ -31,6 +33,7 @@ interface SampleStore {
   exportSamples: (batchId?: number) => Promise<boolean>
   setSearchQuery: (query: string) => void
   setSelectedTagId: (tagId: number | null) => void
+  fetchSampleStats: () => Promise<void>
 }
 
 function handleError(error: unknown, defaultMessage: string): string {
@@ -50,6 +53,8 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
   selectedTagId: null,
   loading: false,
   exporting: false,
+  stats: null,
+  statsLoading: false,
 
   fetchSamples: async (batchId, tagId) => {
     const showToast = useToastStore.getState().showToast
@@ -218,6 +223,20 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
       return false
     } finally {
       set({ exporting: false })
+    }
+  },
+
+  fetchSampleStats: async () => {
+    const showToast = useToastStore.getState().showToast
+    set({ statsLoading: true })
+    try {
+      const stats = await api.fetchSampleStats()
+      set({ stats })
+    } catch (error) {
+      const message = handleError(error, "加载统计数据失败")
+      showToast(message, "error")
+    } finally {
+      set({ statsLoading: false })
     }
   },
 }))

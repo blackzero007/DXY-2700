@@ -105,3 +105,11 @@ export interface Operator {
   created_at: string
   updated_at: string
 }
+
+export interface SampleStats {
+  total: number
+  statusCounts: Record<SampleStatus, number>
+  todayNew: number
+  completed: number
+  discarded: number
+}

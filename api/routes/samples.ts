@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express'
 import { db, saveDb } from '../db.js'
-import { SampleStatus } from '../../shared/types.js'
+import { SampleStatus, type SampleStats } from '../../shared/types.js'
 
 const router = Router()
 
@@ -27,6 +27,61 @@ function getTagsForSample(sampleId: number): Record<string, unknown>[] {
   tagStmt.free()
   return tags
 }
+
+router.get('/stats', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const statusCounts: Record<string, number> = {}
+    const statusValues = Object.values(SampleStatus) as string[]
+    for (const status of statusValues) {
+      statusCounts[status] = 0
+    }
+
+    const statusStmt = db.prepare('SELECT status, COUNT(*) as count FROM samples GROUP BY status')
+    while (statusStmt.step()) {
+      const row = statusStmt.getAsObject() as { status: string; count: number }
+      statusCounts[row.status] = row.count
+    }
+    statusStmt.free()
+
+    const totalStmt = db.prepare('SELECT COUNT(*) as count FROM samples')
+    totalStmt.step()
+    const totalRow = totalStmt.getAsObject() as { count: number }
+    const total = totalRow.count
+    totalStmt.free()
+
+    const todayStmt = db.prepare('SELECT COUNT(*) as count FROM samples WHERE DATE(created_at) = DATE(\'now\',\'localtime\')')
+    todayStmt.step()
+    const todayRow = todayStmt.getAsObject() as { count: number }
+    const todayNew = todayRow.count
+    todayStmt.free()
+
+    const completedStmt = db.prepare('SELECT COUNT(*) as count FROM samples WHERE status = ?')
+    completedStmt.bind([SampleStatus.COMPLETED])
+    completedStmt.step()
+    const completedRow = completedStmt.getAsObject() as { count: number }
+    const completed = completedRow.count
+    completedStmt.free()
+
+    const discardedStmt = db.prepare('SELECT COUNT(*) as count FROM samples WHERE status = ?')
+    discardedStmt.bind([SampleStatus.DISCARDED])
+    discardedStmt.step()
+    const discardedRow = discardedStmt.getAsObject() as { count: number }
+    const discarded = discardedRow.count
+    discardedStmt.free()
+
+    const stats: SampleStats = {
+      total,
+      statusCounts: statusCounts as Record<SampleStatus, number>,
+      todayNew,
+      completed,
+      discarded,
+    }
+
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    res.status(500).json({ success: false, error: '获取样本统计失败' })
+  }
+})
 
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {

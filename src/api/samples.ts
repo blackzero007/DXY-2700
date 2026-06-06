@@ -1,4 +1,4 @@
-import type { Sample, Transition, Tag } from "@/types"
+import type { Sample, Transition, Tag, SampleStats } from "@/types"
 import { SampleStatus } from "@/types"
 
 const API_BASE = "/api/samples"
@@ -153,4 +153,9 @@ export async function exportSamples(search?: string, batchId?: number | null, ta
   a.click()
   document.body.removeChild(a)
   window.URL.revokeObjectURL(url)
+}
+
+export async function fetchSampleStats(): Promise<SampleStats> {
+  const res = await fetch(`${API_BASE}/stats`)
+  return handleResponse<SampleStats>(res)
 }

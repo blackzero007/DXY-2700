@@ -7,16 +7,19 @@ import SearchBar from "@/components/SearchBar"
 import SampleTable from "@/components/SampleTable"
 import StatusModal from "@/components/StatusModal"
 import DeleteModal from "@/components/DeleteModal"
+import SampleStatsCard from "@/components/SampleStatsCard"
 import type { Sample } from "@/types"
 
 export default function Home() {
   const fetchSamples = useSampleStore((s) => s.fetchSamples)
+  const fetchSampleStats = useSampleStore((s) => s.fetchSampleStats)
   const [statusTarget, setStatusTarget] = useState<Sample | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Sample | null>(null)
 
   useEffect(() => {
     fetchSamples()
-  }, [fetchSamples])
+    fetchSampleStats()
+  }, [fetchSamples, fetchSampleStats])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -66,6 +69,10 @@ export default function Home() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-6">
+        <div className="mb-6">
+          <SampleStatsCard />
+        </div>
+
         <div className="mb-6">
           <SearchBar />
         </div>
