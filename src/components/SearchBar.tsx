@@ -17,6 +17,7 @@ export default function SearchBar() {
   const selectedSampleType = useSampleStore((s) => s.selectedSampleType)
   const setSelectedSampleType = useSampleStore((s) => s.setSelectedSampleType)
   const searchSamples = useSampleStore((s) => s.searchSamples)
+  const clearFilters = useSampleStore((s) => s.clearFilters)
   const { tags, fetchTags } = useTagStore()
   const { sampleTypes, fetchSampleTypes } = useSampleTypeStore()
   const [showTagDropdown, setShowTagDropdown] = useState(false)
@@ -54,10 +55,6 @@ export default function SearchBar() {
     }
   }, [])
 
-  const triggerSearch = () => {
-    searchSamples(searchQuery, undefined, selectedTagId, selectedStatus, selectedSampleType)
-  }
-
   const handleSearchChange = (value: string) => {
     setSearchQuery(value)
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -87,13 +84,6 @@ export default function SearchBar() {
   const selectedTag = tags.find((t) => t.id === selectedTagId)
 
   const hasActiveFilters = selectedTagId !== null || selectedStatus !== null || selectedSampleType !== null
-
-  const clearAllFilters = () => {
-    setSelectedTagId(null)
-    setSelectedStatus(null)
-    setSelectedSampleType(null)
-    triggerSearch()
-  }
 
   return (
     <div className="space-y-3">
@@ -278,7 +268,7 @@ export default function SearchBar() {
             </span>
           )}
           <button
-            onClick={clearAllFilters}
+            onClick={clearFilters}
             className="text-gray-500 hover:text-gray-700 ml-2"
           >
             清除全部

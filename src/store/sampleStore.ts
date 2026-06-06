@@ -20,6 +20,7 @@ interface SampleStore {
   statsLoading: boolean
   fetchSamples: (batchId?: number, tagId?: number, status?: string, sampleType?: string) => Promise<void>
   searchSamples: (query: string, batchId?: number, tagId?: number, status?: string, sampleType?: string) => Promise<void>
+  refreshSamples: () => Promise<void>
   createSample: (data: {
     code: string
     name: string
@@ -42,6 +43,8 @@ interface SampleStore {
   setSelectedTagId: (tagId: number | null) => void
   setSelectedStatus: (status: string | null) => void
   setSelectedSampleType: (sampleType: string | null) => void
+  clearFilters: () => Promise<void>
+  clearAllFilters: () => Promise<void>
   fetchSampleStats: () => Promise<void>
   fetchArchivedSamples: (search?: string) => Promise<void>
   searchArchivedSamples: (query: string) => Promise<void>
@@ -99,11 +102,32 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
     }
   },
 
+  refreshSamples: async () => {
+    const showToast = useToastStore.getState().showToast
+    const state = get()
+    set({ loading: true })
+    try {
+      const samples = await api.fetchSamples(
+        state.searchQuery,
+        undefined,
+        state.selectedTagId,
+        state.selectedStatus,
+        state.selectedSampleType
+      )
+      set({ samples })
+    } catch (error) {
+      const message = handleError(error, "刷新样本列表失败")
+      showToast(message, "error")
+    } finally {
+      set({ loading: false })
+    }
+  },
+
   createSample: async (data) => {
     const showToast = useToastStore.getState().showToast
     try {
       await api.createSample(data)
-      await get().fetchSamples()
+      await get().refreshSamples()
       showToast("样本登记成功", "success")
       return true
     } catch (error) {
@@ -117,7 +141,7 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
     const showToast = useToastStore.getState().showToast
     try {
       await api.updateSample(id, { status, operator, note })
-      await get().fetchSamples()
+      await get().refreshSamples()
       showToast("状态更新成功", "success")
       return true
     } catch (error) {
@@ -131,7 +155,7 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
     const showToast = useToastStore.getState().showToast
     try {
       await api.updateSampleBatch(id, batchId)
-      await get().fetchSamples()
+      await get().refreshSamples()
       showToast("批次更新成功", "success")
       return true
     } catch (error) {
@@ -145,7 +169,7 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
     const showToast = useToastStore.getState().showToast
     try {
       await api.deleteSample(id)
-      await get().fetchSamples()
+      await get().refreshSamples()
       showToast("样本删除成功", "success")
       return true
     } catch (error) {
@@ -193,6 +217,25 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
 
   setSelectedSampleType: (sampleType) => set({ selectedSampleType: sampleType }),
 
+  clearFilters: async () => {
+    set({
+      selectedTagId: null,
+      selectedStatus: null,
+      selectedSampleType: null,
+    })
+    await get().refreshSamples()
+  },
+
+  clearAllFilters: async () => {
+    set({
+      searchQuery: "",
+      selectedTagId: null,
+      selectedStatus: null,
+      selectedSampleType: null,
+    })
+    await get().refreshSamples()
+  },
+
   addTagToSample: async (sampleId, tagId) => {
     const showToast = useToastStore.getState().showToast
     try {
@@ -201,13 +244,7 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
       if (currentSample && currentSample.id === sampleId) {
         set({ currentSample: { ...currentSample, tags } })
       }
-      await get().searchSamples(
-        get().searchQuery,
-        undefined,
-        get().selectedTagId,
-        get().selectedStatus,
-        get().selectedSampleType
-      )
+      await get().refreshSamples()
       showToast("标签添加成功", "success")
       return true
     } catch (error) {
@@ -225,13 +262,7 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
       if (currentSample && currentSample.id === sampleId) {
         set({ currentSample: { ...currentSample, tags } })
       }
-      await get().searchSamples(
-        get().searchQuery,
-        undefined,
-        get().selectedTagId,
-        get().selectedStatus,
-        get().selectedSampleType
-      )
+      await get().refreshSamples()
       showToast("标签移除成功", "success")
       return true
     } catch (error) {
