@@ -87,11 +87,51 @@ db.exec(`
     FOREIGN KEY (sample_id) REFERENCES samples(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    color TEXT NOT NULL DEFAULT '#3b82f6',
+    description TEXT DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS sample_tags (
+    sample_id INTEGER NOT NULL,
+    tag_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    PRIMARY KEY (sample_id, tag_id),
+    FOREIGN KEY (sample_id) REFERENCES samples(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_transitions_sample_id ON transitions(sample_id);
   CREATE INDEX IF NOT EXISTS idx_samples_code ON samples(code);
   CREATE INDEX IF NOT EXISTS idx_samples_batch_id ON samples(batch_id);
   CREATE INDEX IF NOT EXISTS idx_batches_code ON batches(code);
+  CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
+  CREATE INDEX IF NOT EXISTS idx_sample_tags_sample_id ON sample_tags(sample_id);
+  CREATE INDEX IF NOT EXISTS idx_sample_tags_tag_id ON sample_tags(tag_id);
 `)
+
+const tagCheck = db.exec("SELECT COUNT(*) as count FROM tags")
+const tagCount = tagCheck[0]?.values[0]?.[0] as number || 0
+
+if (tagCount === 0) {
+  const defaultTags = [
+    { name: '加急', color: '#ef4444', description: '需要优先处理的样本' },
+    { name: '复检', color: '#f59e0b', description: '需要重新检测的样本' },
+    { name: '外部送检', color: '#8b5cf6', description: '送外部机构检测的样本' },
+    { name: '重点跟踪', color: '#10b981', description: '需要重点关注的样本' },
+  ]
+
+  const insertTag = db.prepare('INSERT INTO tags (name, color, description) VALUES (?, ?, ?)')
+  defaultTags.forEach(tag => {
+    insertTag.run([tag.name, tag.color, tag.description])
+  })
+  insertTag.free()
+  saveDb()
+}
 
 function saveDb(): void {
   const data = db.export()

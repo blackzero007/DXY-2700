@@ -12,6 +12,22 @@ function getLastInsertId(): number {
   return row.id
 }
 
+function getTagsForSample(sampleId: number): Record<string, unknown>[] {
+  const tagStmt = db.prepare(`
+    SELECT t.* FROM tags t
+    INNER JOIN sample_tags st ON t.id = st.tag_id
+    WHERE st.sample_id = ?
+    ORDER BY t.created_at ASC
+  `)
+  tagStmt.bind([sampleId])
+  const tags: Record<string, unknown>[] = []
+  while (tagStmt.step()) {
+    tags.push(tagStmt.getAsObject())
+  }
+  tagStmt.free()
+  return tags
+}
+
 function getBatchStats(batchId: number): { total: number; completed: number; discarded: number } {
   const totalStmt = db.prepare('SELECT COUNT(*) as count FROM samples WHERE batch_id = ?')
   totalStmt.bind([batchId])
@@ -237,7 +253,10 @@ router.get('/:id/samples', async (req: Request, res: Response): Promise<void> =>
     stmt.bind([id])
     const samples: Record<string, unknown>[] = []
     while (stmt.step()) {
-      samples.push(stmt.getAsObject())
+      const sample = stmt.getAsObject()
+      const sampleId = sample.id as number
+      const tags = getTagsForSample(sampleId)
+      samples.push({ ...sample, tags })
     }
     stmt.free()
 

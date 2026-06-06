@@ -17,6 +17,17 @@ interface SampleTableProps {
   onDelete: (sample: Sample) => void
 }
 
+function TagBadge({ name, color }: { name: string; color: string }) {
+  return (
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+      style={{ backgroundColor: `${color}20`, color }}
+    >
+      {name}
+    </span>
+  )
+}
+
 export default function SampleTable({ onUpdateStatus, onDelete }: SampleTableProps) {
   const samples = useSampleStore((s) => s.samples)
   const loading = useSampleStore((s) => s.loading)
@@ -48,6 +59,7 @@ export default function SampleTable({ onUpdateStatus, onDelete }: SampleTablePro
               <th className="text-left px-4 py-3 font-medium text-gray-600">类型</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">来源</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">状态</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">标签</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">创建时间</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">操作</th>
             </tr>
@@ -63,6 +75,17 @@ export default function SampleTable({ onUpdateStatus, onDelete }: SampleTablePro
                   <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[sample.status]}`}>
                     {sample.status}
                   </span>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {sample.tags && sample.tags.length > 0 ? (
+                      sample.tags.map((tag) => (
+                        <TagBadge key={tag.id} name={tag.name} color={tag.color} />
+                      ))
+                    ) : (
+                      <span className="text-gray-300 text-xs">-</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-gray-400 text-xs font-mono">
                   {new Date(sample.created_at).toLocaleString("zh-CN")}

@@ -1,4 +1,4 @@
-import type { Sample, Transition } from "@/types"
+import type { Sample, Transition, Tag } from "@/types"
 import { SampleStatus } from "@/types"
 
 const API_BASE = "/api/samples"
@@ -40,10 +40,11 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return json.data
 }
 
-export async function fetchSamples(search?: string, batchId?: number): Promise<Sample[]> {
+export async function fetchSamples(search?: string, batchId?: number, tagId?: number): Promise<Sample[]> {
   const params = new URLSearchParams()
   if (search) params.set("search", search)
   if (batchId !== undefined) params.set("batch_id", String(batchId))
+  if (tagId !== undefined) params.set("tag_id", String(tagId))
   const query = params.toString() ? `?${params.toString()}` : ""
   const res = await fetch(`${API_BASE}${query}`)
   return handleResponse<Sample[]>(res)
@@ -102,4 +103,23 @@ export async function addTransition(
     body: JSON.stringify(data),
   })
   return handleResponse<Transition>(res)
+}
+
+export async function fetchSampleTags(sampleId: number): Promise<Tag[]> {
+  const res = await fetch(`${API_BASE}/${sampleId}/tags`)
+  return handleResponse<Tag[]>(res)
+}
+
+export async function addTagToSample(sampleId: number, tagId: number): Promise<Tag[]> {
+  const res = await fetch(`${API_BASE}/${sampleId}/tags/${tagId}`, {
+    method: "POST",
+  })
+  return handleResponse<Tag[]>(res)
+}
+
+export async function removeTagFromSample(sampleId: number, tagId: number): Promise<Tag[]> {
+  const res = await fetch(`${API_BASE}/${sampleId}/tags/${tagId}`, {
+    method: "DELETE",
+  })
+  return handleResponse<Tag[]>(res)
 }

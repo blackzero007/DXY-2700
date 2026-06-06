@@ -12,35 +12,60 @@ function getLastInsertId(): number {
   return row.id
 }
 
+function getTagsForSample(sampleId: number): Record<string, unknown>[] {
+  const tagStmt = db.prepare(`
+    SELECT t.* FROM tags t
+    INNER JOIN sample_tags st ON t.id = st.tag_id
+    WHERE st.sample_id = ?
+    ORDER BY t.created_at ASC
+  `)
+  tagStmt.bind([sampleId])
+  const tags: Record<string, unknown>[] = []
+  while (tagStmt.step()) {
+    tags.push(tagStmt.getAsObject())
+  }
+  tagStmt.free()
+  return tags
+}
+
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const search = req.query.search as string | undefined
     const batchId = req.query.batch_id as string | undefined
+    const tagId = req.query.tag_id as string | undefined
     const conditions: string[] = []
     const params: unknown[] = []
 
     if (search) {
-      conditions.push('code LIKE ?')
+      conditions.push('s.code LIKE ?')
       params.push(`%${search}%`)
     }
 
     if (batchId) {
-      conditions.push('batch_id = ?')
+      conditions.push('s.batch_id = ?')
       params.push(Number(batchId))
     }
 
-    let sql = 'SELECT * FROM samples'
+    if (tagId) {
+      conditions.push('s.id IN (SELECT sample_id FROM sample_tags WHERE tag_id = ?)')
+      params.push(Number(tagId))
+    }
+
+    let sql = 'SELECT s.* FROM samples s'
     if (conditions.length > 0) {
       sql += ` WHERE ${conditions.join(' AND ')}`
     }
-    sql += ' ORDER BY created_at DESC'
+    sql += ' ORDER BY s.created_at DESC'
 
     const stmt = db.prepare(sql)
     stmt.bind(params)
 
     const results: Record<string, unknown>[] = []
     while (stmt.step()) {
-      results.push(stmt.getAsObject())
+      const sample = stmt.getAsObject()
+      const sampleId = sample.id as number
+      const tags = getTagsForSample(sampleId)
+      results.push({ ...sample, tags })
     }
     stmt.free()
 
@@ -132,7 +157,9 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     }
     transStmt.free()
 
-    res.json({ success: true, data: { ...sample, transitions } })
+    const tags = getTagsForSample(id)
+
+    res.json({ success: true, data: { ...sample, transitions, tags } })
   } catch (error) {
     res.status(500).json({ success: false, error: '获取样本详情失败' })
   }
@@ -269,6 +296,104 @@ router.post('/:id/transitions', async (req: Request, res: Response): Promise<voi
     res.status(201).json({ success: true, data: transition })
   } catch (error) {
     res.status(500).json({ success: false, error: '创建流转记录失败' })
+  }
+})
+
+router.get('/:id/tags', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = Number(req.params.id)
+
+    const checkStmt = db.prepare('SELECT id FROM samples WHERE id = ?')
+    checkStmt.bind([id])
+    if (!checkStmt.step()) {
+      checkStmt.free()
+      res.status(404).json({ success: false, error: '样本不存在' })
+      return
+    }
+    checkStmt.free()
+
+    const tags = getTagsForSample(id)
+
+    res.json({ success: true, data: tags })
+  } catch (error) {
+    res.status(500).json({ success: false, error: '获取样本标签失败' })
+  }
+})
+
+router.post('/:id/tags/:tagId', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = Number(req.params.id)
+    const tagId = Number(req.params.tagId)
+
+    const sampleCheck = db.prepare('SELECT id FROM samples WHERE id = ?')
+    sampleCheck.bind([id])
+    if (!sampleCheck.step()) {
+      sampleCheck.free()
+      res.status(404).json({ success: false, error: '样本不存在' })
+      return
+    }
+    sampleCheck.free()
+
+    const tagCheck = db.prepare('SELECT id FROM tags WHERE id = ?')
+    tagCheck.bind([tagId])
+    if (!tagCheck.step()) {
+      tagCheck.free()
+      res.status(404).json({ success: false, error: '标签不存在' })
+      return
+    }
+    tagCheck.free()
+
+    const existing = db.prepare('SELECT 1 FROM sample_tags WHERE sample_id = ? AND tag_id = ?')
+    existing.bind([id, tagId])
+    if (existing.step()) {
+      existing.free()
+      res.status(409).json({ success: false, error: '样本已拥有该标签' })
+      return
+    }
+    existing.free()
+
+    db.run('INSERT INTO sample_tags (sample_id, tag_id) VALUES (?, ?)', [id, tagId])
+    saveDb()
+
+    const tags = getTagsForSample(id)
+
+    res.status(201).json({ success: true, data: tags, message: '标签添加成功' })
+  } catch (error) {
+    res.status(500).json({ success: false, error: '添加标签失败' })
+  }
+})
+
+router.delete('/:id/tags/:tagId', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = Number(req.params.id)
+    const tagId = Number(req.params.tagId)
+
+    const sampleCheck = db.prepare('SELECT id FROM samples WHERE id = ?')
+    sampleCheck.bind([id])
+    if (!sampleCheck.step()) {
+      sampleCheck.free()
+      res.status(404).json({ success: false, error: '样本不存在' })
+      return
+    }
+    sampleCheck.free()
+
+    const existing = db.prepare('SELECT 1 FROM sample_tags WHERE sample_id = ? AND tag_id = ?')
+    existing.bind([id, tagId])
+    if (!existing.step()) {
+      existing.free()
+      res.status(404).json({ success: false, error: '样本没有该标签' })
+      return
+    }
+    existing.free()
+
+    db.run('DELETE FROM sample_tags WHERE sample_id = ? AND tag_id = ?', [id, tagId])
+    saveDb()
+
+    const tags = getTagsForSample(id)
+
+    res.json({ success: true, data: tags, message: '标签移除成功' })
+  } catch (error) {
+    res.status(500).json({ success: false, error: '移除标签失败' })
   }
 })
 

@@ -1,8 +1,10 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, FlaskConical, FileText, Clock } from "lucide-react"
+import { ArrowLeft, FlaskConical, FileText, Clock, Tag as TagIcon, X, Plus } from "lucide-react"
 import { useSampleStore } from "@/store/sampleStore"
+import { useTagStore } from "@/store/tagStore"
 import { SampleStatus } from "@/types"
+import type { Tag } from "@/types"
 import TransitionTimeline from "@/components/TransitionTimeline"
 import TransitionForm from "@/components/TransitionForm"
 
@@ -14,16 +16,60 @@ const STATUS_COLORS: Record<SampleStatus, string> = {
   [SampleStatus.DISCARDED]: "bg-red-100 text-red-700",
 }
 
+function TagBadge({ tag, onRemove }: { tag: Tag; onRemove?: () => void }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
+      style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+    >
+      {tag.name}
+      {onRemove && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemove()
+          }}
+          className="hover:opacity-70 transition-opacity"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+    </span>
+  )
+}
+
 export default function SampleDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const currentSample = useSampleStore((s) => s.currentSample)
   const fetchSampleDetail = useSampleStore((s) => s.fetchSampleDetail)
+  const addTagToSample = useSampleStore((s) => s.addTagToSample)
+  const removeTagFromSample = useSampleStore((s) => s.removeTagFromSample)
   const loading = useSampleStore((s) => s.loading)
+  const { tags, fetchTags } = useTagStore()
+  const [showTagSelector, setShowTagSelector] = useState(false)
 
   useEffect(() => {
     if (id) fetchSampleDetail(Number(id))
-  }, [id, fetchSampleDetail])
+    fetchTags()
+  }, [id, fetchSampleDetail, fetchTags])
+
+  const availableTags = tags.filter(
+    (tag) => !currentSample?.tags?.find((t) => t.id === tag.id)
+  )
+
+  const handleAddTag = (tagId: number) => {
+    if (id) {
+      addTagToSample(Number(id), tagId)
+      setShowTagSelector(false)
+    }
+  }
+
+  const handleRemoveTag = (tagId: number) => {
+    if (id) {
+      removeTagFromSample(Number(id), tagId)
+    }
+  }
 
   if (loading && !currentSample) {
     return (
@@ -67,7 +113,7 @@ export default function SampleDetail() {
               {currentSample.status}
             </span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-gray-400" />
               <div>
@@ -99,6 +145,53 @@ export default function SampleDetail() {
                   {new Date(currentSample.updated_at).toLocaleString("zh-CN")}
                 </p>
               </div>
+            </div>
+          </div>
+          <div className="border-t border-gray-100 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <TagIcon className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">样本标签</span>
+              </div>
+              <div className="relative">
+                <button
+                  onClick={() => setShowTagSelector(!showTagSelector)}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  添加标签
+                </button>
+                {showTagSelector && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
+                    {availableTags.length > 0 ? (
+                      availableTags.map((tag) => (
+                        <button
+                          key={tag.id}
+                          onClick={() => handleAddTag(tag.id)}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                        >
+                          <span
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: tag.color }}
+                          />
+                          {tag.name}
+                        </button>
+                      ))
+                    ) : (
+                      <p className="px-3 py-2 text-xs text-gray-400">没有可添加的标签</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {currentSample.tags && currentSample.tags.length > 0 ? (
+                currentSample.tags.map((tag) => (
+                  <TagBadge key={tag.id} tag={tag} onRemove={() => handleRemoveTag(tag.id)} />
+                ))
+              ) : (
+                <span className="text-sm text-gray-300">暂无标签</span>
+              )}
             </div>
           </div>
         </div>

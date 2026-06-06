@@ -11,6 +11,15 @@ export enum BatchType {
   EXPERIMENT = "实验批次",
 }
 
+export interface Tag {
+  id: number
+  name: string
+  color: string
+  description: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Sample {
   id: number
   code: string
@@ -21,6 +30,7 @@ export interface Sample {
   batch_id: number | null
   created_at: string
   updated_at: string
+  tags: Tag[]
 }
 
 export interface Transition {

@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import type { Sample, Transition } from "@/types"
+import type { Sample, Transition, Tag } from "@/types"
 import { SampleStatus } from "@/types"
 import * as api from "@/api/samples"
 import { ApiError } from "@/api/samples"
@@ -7,11 +7,12 @@ import { useToastStore } from "@/store/toastStore"
 
 interface SampleStore {
   samples: Sample[]
-  currentSample: (Sample & { transitions: Transition[] }) | null
+  currentSample: (Sample & { transitions: Transition[]; tags: Tag[] }) | null
   searchQuery: string
+  selectedTagId: number | null
   loading: boolean
-  fetchSamples: (batchId?: number) => Promise<void>
-  searchSamples: (query: string, batchId?: number) => Promise<void>
+  fetchSamples: (batchId?: number, tagId?: number) => Promise<void>
+  searchSamples: (query: string, batchId?: number, tagId?: number) => Promise<void>
   createSample: (data: {
     code: string
     name: string
@@ -24,7 +25,10 @@ interface SampleStore {
   deleteSample: (id: number) => Promise<boolean>
   fetchSampleDetail: (id: number) => Promise<boolean>
   addTransition: (id: number, data: { node_name: string; operator: string; note: string }) => Promise<boolean>
+  addTagToSample: (sampleId: number, tagId: number) => Promise<boolean>
+  removeTagFromSample: (sampleId: number, tagId: number) => Promise<boolean>
   setSearchQuery: (query: string) => void
+  setSelectedTagId: (tagId: number | null) => void
 }
 
 function handleError(error: unknown, defaultMessage: string): string {
@@ -41,13 +45,14 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
   samples: [],
   currentSample: null,
   searchQuery: "",
+  selectedTagId: null,
   loading: false,
 
-  fetchSamples: async (batchId) => {
+  fetchSamples: async (batchId, tagId) => {
     const showToast = useToastStore.getState().showToast
     set({ loading: true })
     try {
-      const samples = await api.fetchSamples(undefined, batchId)
+      const samples = await api.fetchSamples(undefined, batchId, tagId)
       set({ samples })
     } catch (error) {
       const message = handleError(error, "加载样本列表失败")
@@ -57,11 +62,11 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
     }
   },
 
-  searchSamples: async (query, batchId) => {
+  searchSamples: async (query, batchId, tagId) => {
     const showToast = useToastStore.getState().showToast
     set({ searchQuery: query, loading: true })
     try {
-      const samples = await api.fetchSamples(query, batchId)
+      const samples = await api.fetchSamples(query, batchId, tagId)
       set({ samples })
     } catch (error) {
       const message = handleError(error, "搜索样本失败")
@@ -158,4 +163,42 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
   },
 
   setSearchQuery: (query) => set({ searchQuery: query }),
+
+  setSelectedTagId: (tagId) => set({ selectedTagId: tagId }),
+
+  addTagToSample: async (sampleId, tagId) => {
+    const showToast = useToastStore.getState().showToast
+    try {
+      const tags = await api.addTagToSample(sampleId, tagId)
+      const currentSample = get().currentSample
+      if (currentSample && currentSample.id === sampleId) {
+        set({ currentSample: { ...currentSample, tags } })
+      }
+      await get().fetchSamples(undefined, get().selectedTagId)
+      showToast("标签添加成功", "success")
+      return true
+    } catch (error) {
+      const message = handleError(error, "添加标签失败")
+      showToast(message, "error")
+      return false
+    }
+  },
+
+  removeTagFromSample: async (sampleId, tagId) => {
+    const showToast = useToastStore.getState().showToast
+    try {
+      const tags = await api.removeTagFromSample(sampleId, tagId)
+      const currentSample = get().currentSample
+      if (currentSample && currentSample.id === sampleId) {
+        set({ currentSample: { ...currentSample, tags } })
+      }
+      await get().fetchSamples(undefined, get().selectedTagId)
+      showToast("标签移除成功", "success")
+      return true
+    } catch (error) {
+      const message = handleError(error, "移除标签失败")
+      showToast(message, "error")
+      return false
+    }
+  },
 }))

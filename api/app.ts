@@ -9,6 +9,7 @@ import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import sampleRoutes from './routes/samples.js'
 import batchRoutes from './routes/batches.js'
+import tagRoutes from './routes/tags.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 app.use('/api/samples', sampleRoutes)
 app.use('/api/batches', batchRoutes)
+app.use('/api/tags', tagRoutes)
 
 app.use(
   '/api/health',

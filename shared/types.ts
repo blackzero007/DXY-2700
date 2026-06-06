@@ -77,6 +77,31 @@ export interface CreateBatchRequest {
   description?: string
 }
 
+export interface Tag {
+  id: number
+  name: string
+  color: string
+  description: string
+  created_at: string
+  updated_at: string
+}
+
+export interface SampleWithTags extends Sample {
+  tags: Tag[]
+}
+
+export interface CreateTagRequest {
+  name: string
+  color?: string
+  description?: string
+}
+
+export interface UpdateTagRequest {
+  name?: string
+  color?: string
+  description?: string
+}
+
 export interface UpdateBatchRequest {
   name?: string
   type?: string

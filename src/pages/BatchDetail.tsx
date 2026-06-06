@@ -16,6 +16,17 @@ const STATUS_COLORS: Record<SampleStatus, string> = {
   [SampleStatus.DISCARDED]: "bg-red-100 text-red-700",
 }
 
+function TagBadge({ name, color }: { name: string; color: string }) {
+  return (
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+      style={{ backgroundColor: `${color}20`, color }}
+    >
+      {name}
+    </span>
+  )
+}
+
 export default function BatchDetail() {
   const { id } = useParams<{ id: string }>()
   const currentBatch = useBatchStore((s) => s.currentBatch)
@@ -164,6 +175,9 @@ export default function BatchDetail() {
                       状态
                     </th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">
+                      标签
+                    </th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">
                       创建时间
                     </th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">
@@ -188,6 +202,17 @@ export default function BatchDetail() {
                         >
                           {sample.status}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {sample.tags && sample.tags.length > 0 ? (
+                            sample.tags.map((tag) => (
+                              <TagBadge key={tag.id} name={tag.name} color={tag.color} />
+                            ))
+                          ) : (
+                            <span className="text-gray-300 text-xs">-</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-gray-400 text-xs font-mono">
                         {new Date(sample.created_at).toLocaleString("zh-CN")}
