@@ -10,10 +10,17 @@ interface SampleStore {
   currentSample: (Sample & { transitions: Transition[] }) | null
   searchQuery: string
   loading: boolean
-  fetchSamples: () => Promise<void>
-  searchSamples: (query: string) => Promise<void>
-  createSample: (data: { code: string; name: string; type: string; source: string }) => Promise<boolean>
+  fetchSamples: (batchId?: number) => Promise<void>
+  searchSamples: (query: string, batchId?: number) => Promise<void>
+  createSample: (data: {
+    code: string
+    name: string
+    type: string
+    source: string
+    batch_id?: number | null
+  }) => Promise<boolean>
   updateSampleStatus: (id: number, status: SampleStatus) => Promise<boolean>
+  updateSampleBatch: (id: number, batchId: number | null) => Promise<boolean>
   deleteSample: (id: number) => Promise<boolean>
   fetchSampleDetail: (id: number) => Promise<boolean>
   addTransition: (id: number, data: { node_name: string; operator: string; note: string }) => Promise<boolean>
@@ -36,11 +43,11 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
   searchQuery: "",
   loading: false,
 
-  fetchSamples: async () => {
+  fetchSamples: async (batchId) => {
     const showToast = useToastStore.getState().showToast
     set({ loading: true })
     try {
-      const samples = await api.fetchSamples()
+      const samples = await api.fetchSamples(undefined, batchId)
       set({ samples })
     } catch (error) {
       const message = handleError(error, "加载样本列表失败")
@@ -50,11 +57,11 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
     }
   },
 
-  searchSamples: async (query: string) => {
+  searchSamples: async (query, batchId) => {
     const showToast = useToastStore.getState().showToast
     set({ searchQuery: query, loading: true })
     try {
-      const samples = await api.fetchSamples(query)
+      const samples = await api.fetchSamples(query, batchId)
       set({ samples })
     } catch (error) {
       const message = handleError(error, "搜索样本失败")
@@ -87,6 +94,20 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
       return true
     } catch (error) {
       const message = handleError(error, "状态更新失败")
+      showToast(message, "error")
+      return false
+    }
+  },
+
+  updateSampleBatch: async (id, batchId) => {
+    const showToast = useToastStore.getState().showToast
+    try {
+      await api.updateSampleBatch(id, batchId)
+      await get().fetchSamples()
+      showToast("批次更新成功", "success")
+      return true
+    } catch (error) {
+      const message = handleError(error, "批次更新失败")
       showToast(message, "error")
       return false
     }

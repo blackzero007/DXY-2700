@@ -15,18 +15,28 @@ function getLastInsertId(): number {
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const search = req.query.search as string | undefined
-    let sql: string
-    let stmt: ReturnType<typeof db.prepare>
+    const batchId = req.query.batch_id as string | undefined
+    const conditions: string[] = []
+    const params: unknown[] = []
 
     if (search) {
-      sql = 'SELECT * FROM samples WHERE code LIKE ? ORDER BY created_at DESC'
-      stmt = db.prepare(sql)
-      stmt.bind([`%${search}%`])
-    } else {
-      sql = 'SELECT * FROM samples ORDER BY created_at DESC'
-      stmt = db.prepare(sql)
-      stmt.bind([])
+      conditions.push('code LIKE ?')
+      params.push(`%${search}%`)
     }
+
+    if (batchId) {
+      conditions.push('batch_id = ?')
+      params.push(Number(batchId))
+    }
+
+    let sql = 'SELECT * FROM samples'
+    if (conditions.length > 0) {
+      sql += ` WHERE ${conditions.join(' AND ')}`
+    }
+    sql += ' ORDER BY created_at DESC'
+
+    const stmt = db.prepare(sql)
+    stmt.bind(params)
 
     const results: Record<string, unknown>[] = []
     while (stmt.step()) {
@@ -42,7 +52,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
 router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { code, name, type, source } = req.body
+    const { code, name, type, source, batch_id } = req.body
 
     if (!code || !name || !type || !source) {
       res.status(400).json({ success: false, error: '缺少必填字段' })
@@ -58,9 +68,20 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     }
     existing.free()
 
+    if (batch_id) {
+      const batchCheck = db.prepare('SELECT id FROM batches WHERE id = ?')
+      batchCheck.bind([batch_id])
+      if (!batchCheck.step()) {
+        batchCheck.free()
+        res.status(400).json({ success: false, error: '批次不存在' })
+        return
+      }
+      batchCheck.free()
+    }
+
     db.run(
-      'INSERT INTO samples (code, name, type, source) VALUES (?, ?, ?, ?)',
-      [code, name, type, source]
+      'INSERT INTO samples (code, name, type, source, batch_id) VALUES (?, ?, ?, ?, ?)',
+      [code, name, type, source, batch_id || null]
     )
 
     const sampleId = getLastInsertId()
@@ -120,13 +141,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
 router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const id = Number(req.params.id)
-    const { status } = req.body
-
-    const validStatuses = Object.values(SampleStatus) as string[]
-    if (!status || !validStatuses.includes(status)) {
-      res.status(400).json({ success: false, error: '无效的状态值' })
-      return
-    }
+    const { status, batch_id } = req.body
 
     const checkStmt = db.prepare('SELECT id FROM samples WHERE id = ?')
     checkStmt.bind([id])
@@ -137,10 +152,43 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     }
     checkStmt.free()
 
-    db.run(
-      'UPDATE samples SET status = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?',
-      [status, id]
-    )
+    const fields: string[] = []
+    const values: unknown[] = []
+
+    if (status !== undefined) {
+      const validStatuses = Object.values(SampleStatus) as string[]
+      if (!validStatuses.includes(status)) {
+        res.status(400).json({ success: false, error: '无效的状态值' })
+        return
+      }
+      fields.push('status = ?')
+      values.push(status)
+    }
+
+    if (batch_id !== undefined) {
+      if (batch_id !== null) {
+        const batchCheck = db.prepare('SELECT id FROM batches WHERE id = ?')
+        batchCheck.bind([batch_id])
+        if (!batchCheck.step()) {
+          batchCheck.free()
+          res.status(400).json({ success: false, error: '批次不存在' })
+          return
+        }
+        batchCheck.free()
+      }
+      fields.push('batch_id = ?')
+      values.push(batch_id)
+    }
+
+    if (fields.length === 0) {
+      res.status(400).json({ success: false, error: '没有提供要更新的字段' })
+      return
+    }
+
+    fields.push('updated_at = datetime(\'now\',\'localtime\')')
+    values.push(id)
+
+    db.run(`UPDATE samples SET ${fields.join(', ')} WHERE id = ?`, values)
 
     saveDb()
 

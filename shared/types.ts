@@ -6,6 +6,11 @@ export enum SampleStatus {
   DISCARDED = "已废弃",
 }
 
+export enum BatchType {
+  PROJECT = "项目",
+  EXPERIMENT = "实验批次",
+}
+
 export interface Sample {
   id: number
   code: string
@@ -13,6 +18,7 @@ export interface Sample {
   type: string
   source: string
   status: SampleStatus
+  batch_id: number | null
   created_at: string
   updated_at: string
 }
@@ -26,11 +32,32 @@ export interface Transition {
   created_at: string
 }
 
+export interface Batch {
+  id: number
+  code: string
+  name: string
+  type: string
+  description: string
+  created_at: string
+  updated_at: string
+}
+
+export interface BatchStats {
+  total: number
+  completed: number
+  discarded: number
+}
+
+export interface BatchWithStats extends Batch {
+  stats: BatchStats
+}
+
 export interface CreateSampleRequest {
   code: string
   name: string
   type: string
   source: string
+  batch_id?: number | null
 }
 
 export interface UpdateSampleStatusRequest {
@@ -41,4 +68,17 @@ export interface CreateTransitionRequest {
   node_name: string
   operator: string
   note: string
+}
+
+export interface CreateBatchRequest {
+  code: string
+  name: string
+  type: string
+  description?: string
+}
+
+export interface UpdateBatchRequest {
+  name?: string
+  type?: string
+  description?: string
 }

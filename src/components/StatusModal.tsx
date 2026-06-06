@@ -9,9 +9,10 @@ const STATUS_OPTIONS = Object.values(SampleStatus)
 interface StatusModalProps {
   sample: Sample | null
   onClose: () => void
+  onSuccess?: () => void
 }
 
-export default function StatusModal({ sample, onClose }: StatusModalProps) {
+export default function StatusModal({ sample, onClose, onSuccess }: StatusModalProps) {
   const updateSampleStatus = useSampleStore((s) => s.updateSampleStatus)
   const [status, setStatus] = useState<SampleStatus>(sample?.status ?? SampleStatus.REGISTERED)
 
@@ -20,6 +21,7 @@ export default function StatusModal({ sample, onClose }: StatusModalProps) {
   const handleConfirm = async () => {
     const success = await updateSampleStatus(sample.id, status)
     if (success) {
+      onSuccess?.()
       onClose()
     }
   }

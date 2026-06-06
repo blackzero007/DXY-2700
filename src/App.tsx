@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
 import Home from "@/pages/Home"
 import SampleDetail from "@/pages/SampleDetail"
+import Batches from "@/pages/Batches"
+import BatchDetail from "@/pages/BatchDetail"
 import ToastContainer from "@/components/ToastContainer"
 
 export default function App() {
@@ -9,6 +11,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/sample/:id" element={<SampleDetail />} />
+        <Route path="/batches" element={<Batches />} />
+        <Route path="/batch/:id" element={<BatchDetail />} />
       </Routes>
       <ToastContainer />
     </Router>

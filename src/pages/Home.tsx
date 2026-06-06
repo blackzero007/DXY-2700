@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
-import { FlaskConical } from "lucide-react"
+import { FlaskConical, Package } from "lucide-react"
+import { Link } from "react-router-dom"
 import { useSampleStore } from "@/store/sampleStore"
 import SampleForm from "@/components/SampleForm"
 import SearchBar from "@/components/SearchBar"
@@ -20,9 +21,26 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-3">
-          <FlaskConical className="w-7 h-7 text-primary" />
-          <h1 className="text-xl font-bold text-gray-800">样本追踪系统</h1>
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FlaskConical className="w-7 h-7 text-primary" />
+            <h1 className="text-xl font-bold text-gray-800">样本追踪系统</h1>
+          </div>
+          <nav className="flex items-center gap-2">
+            <Link
+              to="/"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+            >
+              样本管理
+            </Link>
+            <Link
+              to="/batches"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-2"
+            >
+              <Package className="w-4 h-4" />
+              批次管理
+            </Link>
+          </nav>
         </div>
       </header>
 

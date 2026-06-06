@@ -40,17 +40,35 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return json.data
 }
 
-export async function fetchSamples(search?: string): Promise<Sample[]> {
-  const query = search ? `?search=${encodeURIComponent(search)}` : ""
+export async function fetchSamples(search?: string, batchId?: number): Promise<Sample[]> {
+  const params = new URLSearchParams()
+  if (search) params.set("search", search)
+  if (batchId !== undefined) params.set("batch_id", String(batchId))
+  const query = params.toString() ? `?${params.toString()}` : ""
   const res = await fetch(`${API_BASE}${query}`)
   return handleResponse<Sample[]>(res)
 }
 
-export async function createSample(data: { code: string; name: string; type: string; source: string }): Promise<Sample> {
+export async function createSample(data: {
+  code: string
+  name: string
+  type: string
+  source: string
+  batch_id?: number | null
+}): Promise<Sample> {
   const res = await fetch(API_BASE, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
+  })
+  return handleResponse<Sample>(res)
+}
+
+export async function updateSampleBatch(id: number, batchId: number | null): Promise<Sample> {
+  const res = await fetch(`${API_BASE}/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ batch_id: batchId }),
   })
   return handleResponse<Sample>(res)
 }

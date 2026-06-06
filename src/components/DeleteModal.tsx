@@ -5,9 +5,10 @@ import type { Sample } from "@/types"
 interface DeleteModalProps {
   sample: Sample | null
   onClose: () => void
+  onSuccess?: () => void
 }
 
-export default function DeleteModal({ sample, onClose }: DeleteModalProps) {
+export default function DeleteModal({ sample, onClose, onSuccess }: DeleteModalProps) {
   const deleteSample = useSampleStore((s) => s.deleteSample)
 
   if (!sample) return null
@@ -15,6 +16,7 @@ export default function DeleteModal({ sample, onClose }: DeleteModalProps) {
   const handleConfirm = async () => {
     const success = await deleteSample(sample.id)
     if (success) {
+      onSuccess?.()
       onClose()
     }
   }
