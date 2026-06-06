@@ -17,6 +17,8 @@ if (fs.existsSync(DB_PATH)) {
   db = new SQL.Database()
 }
 
+db.run('PRAGMA foreign_keys = ON')
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS batches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

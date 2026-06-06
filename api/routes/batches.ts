@@ -210,6 +210,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     }
     checkStmt.free()
 
+    db.run('UPDATE samples SET batch_id = NULL WHERE batch_id = ?', [id])
     db.run('DELETE FROM batches WHERE id = ?', [id])
     saveDb()
 
