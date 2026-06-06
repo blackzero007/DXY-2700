@@ -174,7 +174,7 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
       if (currentSample && currentSample.id === sampleId) {
         set({ currentSample: { ...currentSample, tags } })
       }
-      await get().fetchSamples(undefined, get().selectedTagId)
+      await get().searchSamples(get().searchQuery, undefined, get().selectedTagId)
       showToast("标签添加成功", "success")
       return true
     } catch (error) {
@@ -192,7 +192,7 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
       if (currentSample && currentSample.id === sampleId) {
         set({ currentSample: { ...currentSample, tags } })
       }
-      await get().fetchSamples(undefined, get().selectedTagId)
+      await get().searchSamples(get().searchQuery, undefined, get().selectedTagId)
       showToast("标签移除成功", "success")
       return true
     } catch (error) {
