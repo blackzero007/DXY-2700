@@ -1,4 +1,4 @@
-import type { Sample, Transition, Tag, SampleStats, SampleAttachment } from "@/types"
+import type { Sample, Transition, Tag, SampleStats, SampleAttachment, ArchivedSample } from "@/types"
 import { SampleStatus, AttachmentType } from "@/types"
 
 const API_BASE = "/api/samples"
@@ -48,6 +48,14 @@ export async function fetchSamples(search?: string, batchId?: number | null, tag
   const query = params.toString() ? `?${params.toString()}` : ""
   const res = await fetch(`${API_BASE}${query}`)
   return handleResponse<Sample[]>(res)
+}
+
+export async function fetchArchivedSamples(search?: string): Promise<ArchivedSample[]> {
+  const params = new URLSearchParams()
+  if (search) params.set("search", search)
+  const query = params.toString() ? `?${params.toString()}` : ""
+  const res = await fetch(`${API_BASE}/archived${query}`)
+  return handleResponse<ArchivedSample[]>(res)
 }
 
 export async function createSample(data: {

@@ -43,6 +43,53 @@ function getAttachmentsForSample(sampleId: number): Record<string, unknown>[] {
   return attachments
 }
 
+router.get('/archived', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const search = req.query.search as string | undefined
+    const conditions: string[] = ['s.status = ?']
+    const params: unknown[] = [SampleStatus.ARCHIVED]
+
+    if (search) {
+      conditions.push('s.code LIKE ? OR s.name LIKE ?')
+      params.push(`%${search}%`, `%${search}%`)
+    }
+
+    const sql = `
+      SELECT 
+        s.*,
+        t.created_at as archived_at,
+        t.operator as archived_by,
+        t.note as archive_note
+      FROM samples s
+      LEFT JOIN transitions t ON t.sample_id = s.id 
+        AND t.node_name = ?
+        AND t.id = (
+          SELECT id FROM transitions 
+          WHERE sample_id = s.id AND node_name = ? 
+          ORDER BY created_at DESC LIMIT 1
+        )
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY t.created_at DESC
+    `
+
+    const stmt = db.prepare(sql)
+    stmt.bind([SampleStatus.ARCHIVED, SampleStatus.ARCHIVED, ...params])
+
+    const results: Record<string, unknown>[] = []
+    while (stmt.step()) {
+      const sample = stmt.getAsObject()
+      const sampleId = sample.id as number
+      const tags = getTagsForSample(sampleId)
+      results.push({ ...sample, tags })
+    }
+    stmt.free()
+
+    res.json({ success: true, data: results })
+  } catch (_error) {
+    res.status(500).json({ success: false, error: '获取归档样本列表失败' })
+  }
+})
+
 router.get('/stats', async (req: Request, res: Response): Promise<void> => {
   try {
     const statusCounts: Record<string, number> = {}

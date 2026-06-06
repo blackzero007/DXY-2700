@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { FlaskConical, Package, Tag, AlertTriangle, Users, List, Building2 } from "lucide-react"
+import { FlaskConical, Package, Tag, AlertTriangle, Users, List, Building2, Archive } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useSampleStore } from "@/store/sampleStore"
 import SampleForm from "@/components/SampleForm"
@@ -77,6 +77,13 @@ export default function Home() {
             >
               <Building2 className="w-4 h-4" />
               来源单位
+            </Link>
+            <Link
+              to="/archive-records"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-2"
+            >
+              <Archive className="w-4 h-4" />
+              归档记录
             </Link>
           </nav>
         </div>

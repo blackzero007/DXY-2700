@@ -2,6 +2,7 @@ import { FlaskConical, PlusCircle, CheckCircle, Trash2, BarChart3 } from "lucide
 import { useSampleStore } from "@/store/sampleStore"
 import { SampleStatus } from "@/types"
 import { cn } from "@/lib/utils"
+import { Link } from "react-router-dom"
 
 const statusConfig: { status: SampleStatus; label: string; color: string; bgColor: string }[] = [
   { status: SampleStatus.REGISTERED, label: "已登记", color: "text-blue-600", bgColor: "bg-blue-50" },
@@ -87,8 +88,9 @@ export default function SampleStatsCard() {
           {statusConfig.map(({ status, label, color, bgColor }) => {
             const count = stats.statusCounts[status] || 0
             const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0
-            return (
-              <div key={status} className={cn("rounded-lg p-3 text-center", bgColor)}>
+            const isArchived = status === SampleStatus.ARCHIVED
+            const cardContent = (
+              <div className={cn("rounded-lg p-3 text-center", bgColor, isArchived && "cursor-pointer hover:opacity-90 transition-opacity")}>
                 <p className={cn("text-xl font-bold", color)}>{count}</p>
                 <p className="text-xs text-gray-500 mt-1">{label}</p>
                 <div className="mt-2 h-1 bg-white/50 rounded-full overflow-hidden">
@@ -98,6 +100,13 @@ export default function SampleStatsCard() {
                   ></div>
                 </div>
               </div>
+            )
+            return isArchived ? (
+              <Link key={status} to="/archive-records" className="block">
+                {cardContent}
+              </Link>
+            ) : (
+              <div key={status}>{cardContent}</div>
             )
           })}
         </div>

@@ -160,3 +160,9 @@ export interface SampleAttachment {
   created_at: string
   updated_at: string
 }
+
+export interface ArchivedSample extends Sample {
+  archived_at: string | null
+  archived_by: string | null
+  archive_note: string | null
+}

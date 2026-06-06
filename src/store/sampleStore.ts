@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import type { Sample, Transition, Tag, SampleStats, SampleAttachment } from "@/types"
+import type { Sample, Transition, Tag, SampleStats, SampleAttachment, ArchivedSample } from "@/types"
 import { SampleStatus, AttachmentType } from "@/types"
 import * as api from "@/api/samples"
 import { ApiError } from "@/api/samples"
@@ -7,10 +7,12 @@ import { useToastStore } from "@/store/toastStore"
 
 interface SampleStore {
   samples: Sample[]
+  archivedSamples: ArchivedSample[]
   currentSample: (Sample & { transitions: Transition[]; tags: Tag[]; attachments: SampleAttachment[] }) | null
   searchQuery: string
   selectedTagId: number | null
   loading: boolean
+  archivedLoading: boolean
   exporting: boolean
   stats: SampleStats | null
   statsLoading: boolean
@@ -37,6 +39,8 @@ interface SampleStore {
   setSearchQuery: (query: string) => void
   setSelectedTagId: (tagId: number | null) => void
   fetchSampleStats: () => Promise<void>
+  fetchArchivedSamples: (search?: string) => Promise<void>
+  searchArchivedSamples: (query: string) => Promise<void>
 }
 
 function handleError(error: unknown, defaultMessage: string): string {
@@ -51,10 +55,12 @@ function handleError(error: unknown, defaultMessage: string): string {
 
 export const useSampleStore = create<SampleStore>((set, get) => ({
   samples: [],
+  archivedSamples: [],
   currentSample: null,
   searchQuery: "",
   selectedTagId: null,
   loading: false,
+  archivedLoading: false,
   exporting: false,
   stats: null,
   statsLoading: false,
@@ -294,6 +300,34 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
       showToast(message, "error")
     } finally {
       set({ statsLoading: false })
+    }
+  },
+
+  fetchArchivedSamples: async (search) => {
+    const showToast = useToastStore.getState().showToast
+    set({ archivedLoading: true })
+    try {
+      const archivedSamples = await api.fetchArchivedSamples(search)
+      set({ archivedSamples })
+    } catch (error) {
+      const message = handleError(error, "加载归档样本列表失败")
+      showToast(message, "error")
+    } finally {
+      set({ archivedLoading: false })
+    }
+  },
+
+  searchArchivedSamples: async (query) => {
+    const showToast = useToastStore.getState().showToast
+    set({ archivedLoading: true })
+    try {
+      const archivedSamples = await api.fetchArchivedSamples(query)
+      set({ archivedSamples })
+    } catch (error) {
+      const message = handleError(error, "搜索归档样本失败")
+      showToast(message, "error")
+    } finally {
+      set({ archivedLoading: false })
     }
   },
 }))

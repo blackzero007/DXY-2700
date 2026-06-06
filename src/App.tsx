@@ -8,6 +8,7 @@ import SampleTypes from "@/pages/SampleTypes"
 import Exceptions from "@/pages/Exceptions"
 import Operators from "@/pages/Operators"
 import SourceUnits from "@/pages/SourceUnits"
+import ArchiveRecords from "@/pages/ArchiveRecords"
 import ToastContainer from "@/components/ToastContainer"
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/exceptions" element={<Exceptions />} />
         <Route path="/operators" element={<Operators />} />
         <Route path="/source-units" element={<SourceUnits />} />
+        <Route path="/archive-records" element={<ArchiveRecords />} />
       </Routes>
       <ToastContainer />
     </Router>
