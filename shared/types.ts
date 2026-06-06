@@ -210,6 +210,13 @@ export interface UpdateSampleTypeRequest {
   sort_order?: number
 }
 
+export enum AttachmentType {
+  TEST_REPORT = "检测报告",
+  HANDOVER_FORM = "交接单",
+  IMAGE = "图片",
+  OTHER = "其他",
+}
+
 export enum SourceUnitType {
   HOSPITAL = "医院",
   DEPARTMENT = "科室",
@@ -251,4 +258,26 @@ export interface UpdateSourceUnitRequest {
   address?: string
   description?: string
   sort_order?: number
+}
+
+export interface SampleAttachment {
+  id: number
+  sample_id: number
+  name: string
+  type: AttachmentType
+  note: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateSampleAttachmentRequest {
+  name: string
+  type: AttachmentType
+  note?: string
+}
+
+export interface UpdateSampleAttachmentRequest {
+  name?: string
+  type?: AttachmentType
+  note?: string
 }

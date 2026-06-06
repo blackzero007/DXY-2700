@@ -174,6 +174,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_source_units_name ON source_units(name);
   CREATE INDEX IF NOT EXISTS idx_source_units_type ON source_units(type);
   CREATE INDEX IF NOT EXISTS idx_source_units_code ON source_units(code);
+
+  CREATE TABLE IF NOT EXISTS sample_attachments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sample_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT '其他',
+    note TEXT DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    FOREIGN KEY (sample_id) REFERENCES samples(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sample_attachments_sample_id ON sample_attachments(sample_id);
+  CREATE INDEX IF NOT EXISTS idx_sample_attachments_type ON sample_attachments(type);
 `)
 
 const tagCheck = db.exec("SELECT COUNT(*) as count FROM tags")

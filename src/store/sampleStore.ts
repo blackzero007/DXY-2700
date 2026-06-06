@@ -1,13 +1,13 @@
 import { create } from "zustand"
-import type { Sample, Transition, Tag, SampleStats } from "@/types"
-import { SampleStatus } from "@/types"
+import type { Sample, Transition, Tag, SampleStats, SampleAttachment } from "@/types"
+import { SampleStatus, AttachmentType } from "@/types"
 import * as api from "@/api/samples"
 import { ApiError } from "@/api/samples"
 import { useToastStore } from "@/store/toastStore"
 
 interface SampleStore {
   samples: Sample[]
-  currentSample: (Sample & { transitions: Transition[]; tags: Tag[] }) | null
+  currentSample: (Sample & { transitions: Transition[]; tags: Tag[]; attachments: SampleAttachment[] }) | null
   searchQuery: string
   selectedTagId: number | null
   loading: boolean
@@ -30,6 +30,9 @@ interface SampleStore {
   addTransition: (id: number, data: { node_name: string; operator: string; note: string }) => Promise<boolean>
   addTagToSample: (sampleId: number, tagId: number) => Promise<boolean>
   removeTagFromSample: (sampleId: number, tagId: number) => Promise<boolean>
+  addAttachment: (sampleId: number, data: { name: string; type: AttachmentType; note?: string }) => Promise<boolean>
+  updateAttachment: (sampleId: number, attachmentId: number, data: { name?: string; type?: AttachmentType; note?: string }) => Promise<boolean>
+  deleteAttachment: (sampleId: number, attachmentId: number) => Promise<boolean>
   exportSamples: (batchId?: number) => Promise<boolean>
   setSearchQuery: (query: string) => void
   setSelectedTagId: (tagId: number | null) => void
@@ -205,6 +208,60 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
       return true
     } catch (error) {
       const message = handleError(error, "移除标签失败")
+      showToast(message, "error")
+      return false
+    }
+  },
+
+  addAttachment: async (sampleId, data) => {
+    const showToast = useToastStore.getState().showToast
+    try {
+      await api.createSampleAttachment(sampleId, data)
+      const currentSample = get().currentSample
+      if (currentSample && currentSample.id === sampleId) {
+        const attachments = await api.fetchSampleAttachments(sampleId)
+        set({ currentSample: { ...currentSample, attachments } })
+      }
+      showToast("附件添加成功", "success")
+      return true
+    } catch (error) {
+      const message = handleError(error, "添加附件失败")
+      showToast(message, "error")
+      return false
+    }
+  },
+
+  updateAttachment: async (sampleId, attachmentId, data) => {
+    const showToast = useToastStore.getState().showToast
+    try {
+      await api.updateSampleAttachment(sampleId, attachmentId, data)
+      const currentSample = get().currentSample
+      if (currentSample && currentSample.id === sampleId) {
+        const attachments = await api.fetchSampleAttachments(sampleId)
+        set({ currentSample: { ...currentSample, attachments } })
+      }
+      showToast("附件更新成功", "success")
+      return true
+    } catch (error) {
+      const message = handleError(error, "更新附件失败")
+      showToast(message, "error")
+      return false
+    }
+  },
+
+  deleteAttachment: async (sampleId, attachmentId) => {
+    const showToast = useToastStore.getState().showToast
+    try {
+      await api.deleteSampleAttachment(sampleId, attachmentId)
+      const currentSample = get().currentSample
+      if (currentSample && currentSample.id === sampleId) {
+        const attachments = await api.fetchSampleAttachments(sampleId)
+        set({ currentSample: { ...currentSample, attachments } })
+      }
+      showToast("附件删除成功", "success")
+      return true
+    } catch (error) {
+      const message = handleError(error, "删除附件失败")
       showToast(message, "error")
       return false
     }

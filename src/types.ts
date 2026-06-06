@@ -130,6 +130,13 @@ export enum SourceUnitType {
   OTHER = "其他",
 }
 
+export enum AttachmentType {
+  TEST_REPORT = "检测报告",
+  HANDOVER_FORM = "交接单",
+  IMAGE = "图片",
+  OTHER = "其他",
+}
+
 export interface SourceUnit {
   id: number
   name: string
@@ -140,6 +147,16 @@ export interface SourceUnit {
   address: string
   description: string
   sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface SampleAttachment {
+  id: number
+  sample_id: number
+  name: string
+  type: AttachmentType
+  note: string
   created_at: string
   updated_at: string
 }

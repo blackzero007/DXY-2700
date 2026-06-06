@@ -28,6 +28,21 @@ function getTagsForSample(sampleId: number): Record<string, unknown>[] {
   return tags
 }
 
+function getAttachmentsForSample(sampleId: number): Record<string, unknown>[] {
+  const attStmt = db.prepare(`
+    SELECT * FROM sample_attachments
+    WHERE sample_id = ?
+    ORDER BY created_at DESC
+  `)
+  attStmt.bind([sampleId])
+  const attachments: Record<string, unknown>[] = []
+  while (attStmt.step()) {
+    attachments.push(attStmt.getAsObject())
+  }
+  attStmt.free()
+  return attachments
+}
+
 router.get('/stats', async (req: Request, res: Response): Promise<void> => {
   try {
     const statusCounts: Record<string, number> = {}
@@ -293,8 +308,9 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     transStmt.free()
 
     const tags = getTagsForSample(id)
+    const attachments = getAttachmentsForSample(id)
 
-    res.json({ success: true, data: { ...sample, transitions, tags } })
+    res.json({ success: true, data: { ...sample, transitions, tags, attachments } })
   } catch (error) {
     res.status(500).json({ success: false, error: '获取样本详情失败' })
   }
@@ -530,6 +546,168 @@ router.delete('/:id/tags/:tagId', async (req: Request, res: Response): Promise<v
     res.json({ success: true, data: tags, message: '标签移除成功' })
   } catch (error) {
     res.status(500).json({ success: false, error: '移除标签失败' })
+  }
+})
+
+router.get('/:id/attachments', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = Number(req.params.id)
+
+    const checkStmt = db.prepare('SELECT id FROM samples WHERE id = ?')
+    checkStmt.bind([id])
+    if (!checkStmt.step()) {
+      checkStmt.free()
+      res.status(404).json({ success: false, error: '样本不存在' })
+      return
+    }
+    checkStmt.free()
+
+    const attachments = getAttachmentsForSample(id)
+
+    res.json({ success: true, data: attachments })
+  } catch (error) {
+    res.status(500).json({ success: false, error: '获取附件列表失败' })
+  }
+})
+
+router.post('/:id/attachments', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = Number(req.params.id)
+    const { name, type, note } = req.body
+
+    if (!name || !type) {
+      res.status(400).json({ success: false, error: '缺少必填字段：名称和类型' })
+      return
+    }
+
+    const checkStmt = db.prepare('SELECT id FROM samples WHERE id = ?')
+    checkStmt.bind([id])
+    if (!checkStmt.step()) {
+      checkStmt.free()
+      res.status(404).json({ success: false, error: '样本不存在' })
+      return
+    }
+    checkStmt.free()
+
+    db.run(
+      'INSERT INTO sample_attachments (sample_id, name, type, note) VALUES (?, ?, ?, ?)',
+      [id, name, type, note || '']
+    )
+
+    const attachmentId = getLastInsertId()
+
+    saveDb()
+
+    const stmt = db.prepare('SELECT * FROM sample_attachments WHERE id = ?')
+    stmt.bind([attachmentId])
+    let attachment: Record<string, unknown> | null = null
+    if (stmt.step()) {
+      attachment = stmt.getAsObject()
+    }
+    stmt.free()
+
+    res.status(201).json({ success: true, data: attachment })
+  } catch (error) {
+    res.status(500).json({ success: false, error: '创建附件失败' })
+  }
+})
+
+router.put('/:id/attachments/:attachmentId', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = Number(req.params.id)
+    const attachmentId = Number(req.params.attachmentId)
+    const { name, type, note } = req.body
+
+    const sampleCheck = db.prepare('SELECT id FROM samples WHERE id = ?')
+    sampleCheck.bind([id])
+    if (!sampleCheck.step()) {
+      sampleCheck.free()
+      res.status(404).json({ success: false, error: '样本不存在' })
+      return
+    }
+    sampleCheck.free()
+
+    const attCheck = db.prepare('SELECT id FROM sample_attachments WHERE id = ? AND sample_id = ?')
+    attCheck.bind([attachmentId, id])
+    if (!attCheck.step()) {
+      attCheck.free()
+      res.status(404).json({ success: false, error: '附件不存在' })
+      return
+    }
+    attCheck.free()
+
+    const fields: string[] = []
+    const values: unknown[] = []
+
+    if (name !== undefined) {
+      fields.push('name = ?')
+      values.push(name)
+    }
+    if (type !== undefined) {
+      fields.push('type = ?')
+      values.push(type)
+    }
+    if (note !== undefined) {
+      fields.push('note = ?')
+      values.push(note)
+    }
+
+    if (fields.length === 0) {
+      res.status(400).json({ success: false, error: '没有提供要更新的字段' })
+      return
+    }
+
+    fields.push('updated_at = datetime(\'now\',\'localtime\')')
+    values.push(attachmentId)
+
+    db.run(`UPDATE sample_attachments SET ${fields.join(', ')} WHERE id = ?`, values)
+
+    saveDb()
+
+    const stmt = db.prepare('SELECT * FROM sample_attachments WHERE id = ?')
+    stmt.bind([attachmentId])
+    let attachment: Record<string, unknown> | null = null
+    if (stmt.step()) {
+      attachment = stmt.getAsObject()
+    }
+    stmt.free()
+
+    res.json({ success: true, data: attachment })
+  } catch (error) {
+    res.status(500).json({ success: false, error: '更新附件失败' })
+  }
+})
+
+router.delete('/:id/attachments/:attachmentId', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = Number(req.params.id)
+    const attachmentId = Number(req.params.attachmentId)
+
+    const sampleCheck = db.prepare('SELECT id FROM samples WHERE id = ?')
+    sampleCheck.bind([id])
+    if (!sampleCheck.step()) {
+      sampleCheck.free()
+      res.status(404).json({ success: false, error: '样本不存在' })
+      return
+    }
+    sampleCheck.free()
+
+    const attCheck = db.prepare('SELECT id FROM sample_attachments WHERE id = ? AND sample_id = ?')
+    attCheck.bind([attachmentId, id])
+    if (!attCheck.step()) {
+      attCheck.free()
+      res.status(404).json({ success: false, error: '附件不存在' })
+      return
+    }
+    attCheck.free()
+
+    db.run('DELETE FROM sample_attachments WHERE id = ?', [attachmentId])
+
+    saveDb()
+
+    res.json({ success: true, message: '附件已删除' })
+  } catch (error) {
+    res.status(500).json({ success: false, error: '删除附件失败' })
   }
 })
 

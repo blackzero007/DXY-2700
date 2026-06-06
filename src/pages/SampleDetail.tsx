@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, FlaskConical, FileText, Clock, Tag as TagIcon, X, Plus, AlertTriangle } from "lucide-react"
+import { ArrowLeft, FlaskConical, FileText, Clock, Tag as TagIcon, X, Plus, AlertTriangle, Paperclip } from "lucide-react"
 import { useSampleStore } from "@/store/sampleStore"
 import { useExceptionStore } from "@/store/exceptionStore"
 import { useTagStore } from "@/store/tagStore"
-import { SampleStatus, ExceptionStatus, ExceptionType } from "@/types"
-import type { Tag, SampleExceptionWithSample } from "@/types"
+import { SampleStatus, ExceptionStatus, ExceptionType, AttachmentType } from "@/types"
+import type { Tag, SampleExceptionWithSample, SampleAttachment } from "@/types"
 import TransitionTimeline from "@/components/TransitionTimeline"
 import TransitionForm from "@/components/TransitionForm"
 import ExceptionForm from "@/components/ExceptionForm"
 import ExceptionResolveForm from "@/components/ExceptionResolveForm"
 import ConfirmModal from "@/components/ConfirmModal"
+import SampleAttachmentForm from "@/components/SampleAttachmentForm"
 
 const STATUS_COLORS: Record<SampleStatus, string> = {
   [SampleStatus.REGISTERED]: "bg-blue-100 text-blue-700",
@@ -33,6 +34,13 @@ const EXCEPTION_TYPE_COLORS: Record<ExceptionType, string> = {
   [ExceptionType.INFO_MISSING]: "bg-yellow-100 text-yellow-700",
   [ExceptionType.RESULT_ABNORMAL]: "bg-purple-100 text-purple-700",
   [ExceptionType.OTHER]: "bg-gray-100 text-gray-600",
+}
+
+const ATTACHMENT_TYPE_COLORS: Record<AttachmentType, string> = {
+  [AttachmentType.TEST_REPORT]: "bg-blue-100 text-blue-700",
+  [AttachmentType.HANDOVER_FORM]: "bg-green-100 text-green-700",
+  [AttachmentType.IMAGE]: "bg-purple-100 text-purple-700",
+  [AttachmentType.OTHER]: "bg-gray-100 text-gray-600",
 }
 
 function TagBadge({ tag, onRemove }: { tag: Tag; onRemove?: () => void }) {
@@ -74,6 +82,58 @@ function ExceptionBadge({ exc }: { exc: SampleExceptionWithSample }) {
   )
 }
 
+function AttachmentItem({ attachment, onEdit, onDelete }: { 
+  attachment: SampleAttachment
+  onEdit?: () => void
+  onDelete?: () => void
+}) {
+  return (
+    <div className="group flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
+      <Paperclip className="w-5 h-5 text-gray-400 flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-gray-800 font-medium truncate">{attachment.name}</p>
+          <span className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${ATTACHMENT_TYPE_COLORS[attachment.type]}`}>
+            {attachment.type}
+          </span>
+        </div>
+        {attachment.note && (
+          <p className="text-xs text-gray-400 mt-1 truncate">{attachment.note}</p>
+        )}
+        <p className="text-xs text-gray-300 mt-1">{new Date(attachment.created_at).toLocaleString("zh-CN")}</p>
+      </div>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {onEdit && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit()
+            }}
+            className="p-1.5 rounded text-gray-400 hover:text-primary hover:bg-primary/10 transition-colors"
+            title="编辑"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete()
+            }}
+            className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+            title="删除"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function SampleDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -90,6 +150,10 @@ export default function SampleDetail() {
   const [showExceptionForm, setShowExceptionForm] = useState(false)
   const [editException, setEditException] = useState<SampleExceptionWithSample | null>(null)
   const [deleteExceptionTarget, setDeleteExceptionTarget] = useState<SampleExceptionWithSample | null>(null)
+  const [showAttachmentForm, setShowAttachmentForm] = useState(false)
+  const [editAttachment, setEditAttachment] = useState<SampleAttachment | null>(null)
+  const [deleteAttachmentTarget, setDeleteAttachmentTarget] = useState<SampleAttachment | null>(null)
+  const deleteAttachment = useSampleStore((s) => s.deleteAttachment)
 
   useEffect(() => {
     if (id) {
@@ -122,6 +186,14 @@ export default function SampleDetail() {
     if (success) {
       setDeleteExceptionTarget(null)
       if (id) fetchExceptions(Number(id))
+    }
+  }
+
+  const handleDeleteAttachment = async () => {
+    if (!deleteAttachmentTarget || !id) return
+    const success = await deleteAttachment(Number(id), deleteAttachmentTarget.id)
+    if (success) {
+      setDeleteAttachmentTarget(null)
     }
   }
 
@@ -301,6 +373,57 @@ export default function SampleDetail() {
           )}
         </div>
 
+        {/* 附件管理 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Paperclip className="w-5 h-5 text-primary" />
+              <h3 className="text-lg font-semibold text-gray-800">附件资料</h3>
+            </div>
+            <button
+              onClick={() => {
+                setEditAttachment(null)
+                setShowAttachmentForm(!showAttachmentForm)
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              登记附件
+            </button>
+          </div>
+
+          {showAttachmentForm && (
+            <div className="mb-4">
+              <SampleAttachmentForm
+                sampleId={currentSample.id}
+                attachment={editAttachment}
+                onClose={() => {
+                  setShowAttachmentForm(false)
+                  setEditAttachment(null)
+                }}
+              />
+            </div>
+          )}
+
+          {currentSample.attachments && currentSample.attachments.length > 0 ? (
+            <div className="space-y-2">
+              {currentSample.attachments.map((att) => (
+                <AttachmentItem
+                  key={att.id}
+                  attachment={att}
+                  onEdit={() => {
+                    setEditAttachment(att)
+                    setShowAttachmentForm(true)
+                  }}
+                  onDelete={() => setDeleteAttachmentTarget(att)}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-300 text-center py-4">暂无附件资料</p>
+          )}
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">流转记录</h3>
           <TransitionTimeline transitions={currentSample.transitions} />
@@ -328,6 +451,17 @@ export default function SampleDetail() {
         variant="danger"
         onClose={() => setDeleteExceptionTarget(null)}
         onConfirm={handleDeleteException}
+      />
+
+      <ConfirmModal
+        open={!!deleteAttachmentTarget}
+        title="删除附件"
+        message={`确定要删除附件 "${deleteAttachmentTarget?.name}" 吗？此操作不可撤销。`}
+        confirmText="确认删除"
+        cancelText="取消"
+        variant="danger"
+        onClose={() => setDeleteAttachmentTarget(null)}
+        onConfirm={handleDeleteAttachment}
       />
     </div>
   )

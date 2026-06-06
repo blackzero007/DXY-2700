@@ -1,5 +1,5 @@
-import type { Sample, Transition, Tag, SampleStats } from "@/types"
-import { SampleStatus } from "@/types"
+import type { Sample, Transition, Tag, SampleStats, SampleAttachment } from "@/types"
+import { SampleStatus, AttachmentType } from "@/types"
 
 const API_BASE = "/api/samples"
 
@@ -74,9 +74,9 @@ export async function updateSampleBatch(id: number, batchId: number | null): Pro
   return handleResponse<Sample>(res)
 }
 
-export async function fetchSampleById(id: number): Promise<Sample & { transitions: Transition[] }> {
+export async function fetchSampleById(id: number): Promise<Sample & { transitions: Transition[]; tags: Tag[]; attachments: SampleAttachment[] }> {
   const res = await fetch(`${API_BASE}/${id}`)
-  return handleResponse<Sample & { transitions: Transition[] }>(res)
+  return handleResponse<Sample & { transitions: Transition[]; tags: Tag[]; attachments: SampleAttachment[] }>(res)
 }
 
 export async function updateSample(id: number, data: { status: SampleStatus }): Promise<Sample> {
@@ -158,4 +158,44 @@ export async function exportSamples(search?: string, batchId?: number | null, ta
 export async function fetchSampleStats(): Promise<SampleStats> {
   const res = await fetch(`${API_BASE}/stats`)
   return handleResponse<SampleStats>(res)
+}
+
+export async function fetchSampleAttachments(sampleId: number): Promise<SampleAttachment[]> {
+  const res = await fetch(`${API_BASE}/${sampleId}/attachments`)
+  return handleResponse<SampleAttachment[]>(res)
+}
+
+export async function createSampleAttachment(
+  sampleId: number,
+  data: { name: string; type: AttachmentType; note?: string }
+): Promise<SampleAttachment> {
+  const res = await fetch(`${API_BASE}/${sampleId}/attachments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  return handleResponse<SampleAttachment>(res)
+}
+
+export async function updateSampleAttachment(
+  sampleId: number,
+  attachmentId: number,
+  data: { name?: string; type?: AttachmentType; note?: string }
+): Promise<SampleAttachment> {
+  const res = await fetch(`${API_BASE}/${sampleId}/attachments/${attachmentId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  return handleResponse<SampleAttachment>(res)
+}
+
+export async function deleteSampleAttachment(
+  sampleId: number,
+  attachmentId: number
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/${sampleId}/attachments/${attachmentId}`, {
+    method: "DELETE",
+  })
+  await handleResponse<void>(res)
 }
