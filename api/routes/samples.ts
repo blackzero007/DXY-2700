@@ -4,6 +4,25 @@ import { SampleStatus, type SampleStats } from '../../shared/types.js'
 
 const router = Router()
 
+const SAMPLE_CODE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{1,29}$/
+
+function validateSampleCode(code: string): { valid: boolean; message?: string } {
+  if (!code || !code.trim()) {
+    return { valid: false, message: '样本编号不能为空' }
+  }
+  const trimmed = code.trim()
+  if (trimmed.length < 2) {
+    return { valid: false, message: '样本编号长度不足，至少需要 2 个字符' }
+  }
+  if (trimmed.length > 30) {
+    return { valid: false, message: '样本编号长度超限，不能超过 30 个字符' }
+  }
+  if (!SAMPLE_CODE_PATTERN.test(trimmed)) {
+    return { valid: false, message: '样本编号格式不正确，仅支持字母、数字、下划线和连字符，且必须以字母或数字开头' }
+  }
+  return { valid: true }
+}
+
 function getLastInsertId(): number {
   const stmt = db.prepare('SELECT last_insert_rowid() as id')
   stmt.step()
@@ -208,26 +227,53 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const { code, name, type, source, batch_id } = req.body
 
-    if (!code || !name || !type || !source) {
-      res.status(400).json({ success: false, error: '缺少必填字段' })
+    if (!code || !code.trim()) {
+      res.status(400).json({ success: false, error: '样本编号不能为空，请输入有效的样本编号' })
       return
     }
 
-    const existing = db.prepare('SELECT id FROM samples WHERE code = ?')
-    existing.bind([code])
+    const codeValidation = validateSampleCode(code)
+    if (!codeValidation.valid) {
+      res.status(400).json({ success: false, error: codeValidation.message })
+      return
+    }
+
+    if (!name || !name.trim()) {
+      res.status(400).json({ success: false, error: '样本名称不能为空，请输入样本名称' })
+      return
+    }
+
+    if (!type || !type.trim()) {
+      res.status(400).json({ success: false, error: '样本类型不能为空，请选择样本类型' })
+      return
+    }
+
+    if (!source || !source.trim()) {
+      res.status(400).json({ success: false, error: '样本来源不能为空，请填写样本来源详情' })
+      return
+    }
+
+    const trimmedCode = code.trim()
+
+    const existing = db.prepare('SELECT id, name FROM samples WHERE code = ?')
+    existing.bind([trimmedCode])
     if (existing.step()) {
+      const row = existing.getAsObject() as { id: number; name: string }
       existing.free()
-      res.status(409).json({ success: false, error: '样本编号已存在' })
+      res.status(409).json({
+        success: false,
+        error: `样本编号 "${trimmedCode}" 已存在，对应样本名称：${row.name}`,
+      })
       return
     }
     existing.free()
 
     if (batch_id) {
-      const batchCheck = db.prepare('SELECT id FROM batches WHERE id = ?')
+      const batchCheck = db.prepare('SELECT id, code, name FROM batches WHERE id = ?')
       batchCheck.bind([batch_id])
       if (!batchCheck.step()) {
         batchCheck.free()
-        res.status(400).json({ success: false, error: '批次不存在' })
+        res.status(400).json({ success: false, error: `批次 ID "${batch_id}" 不存在，请选择有效的批次` })
         return
       }
       batchCheck.free()
@@ -235,7 +281,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
     db.run(
       'INSERT INTO samples (code, name, type, source, batch_id) VALUES (?, ?, ?, ?, ?)',
-      [code, name, type, source, batch_id || null]
+      [trimmedCode, name.trim(), type.trim(), source.trim(), batch_id || null]
     )
 
     const sampleId = getLastInsertId()
@@ -257,7 +303,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
     res.status(201).json({ success: true, data: sample })
   } catch (error) {
-    res.status(500).json({ success: false, error: '创建样本失败' })
+    res.status(500).json({ success: false, error: '创建样本失败，请稍后重试' })
   }
 })
 
