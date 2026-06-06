@@ -488,9 +488,15 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    if (statusChanged && !operator) {
-      res.status(400).json({ success: false, error: '状态变更时必须提供操作人' })
-      return
+    if (statusChanged) {
+      if (!operator || !operator.trim()) {
+        res.status(400).json({ success: false, error: '状态变更时必须填写操作人' })
+        return
+      }
+      if (!note || !note.trim()) {
+        res.status(400).json({ success: false, error: '状态变更时必须填写变更备注' })
+        return
+      }
     }
 
     fields.push('updated_at = datetime(\'now\',\'localtime\')')
@@ -498,10 +504,10 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
 
     db.run(`UPDATE samples SET ${fields.join(', ')} WHERE id = ?`, values)
 
-    if (statusChanged && operator) {
+    if (statusChanged) {
       db.run(
         'INSERT INTO transitions (sample_id, node_name, operator, note) VALUES (?, ?, ?, ?)',
-        [id, status, operator, note || '']
+        [id, status, operator.trim(), note.trim()]
       )
     }
 

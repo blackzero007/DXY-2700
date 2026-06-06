@@ -77,6 +77,8 @@ export interface CreateSampleRequest {
 
 export interface UpdateSampleStatusRequest {
   status: SampleStatus
+  operator?: string
+  note?: string
 }
 
 export interface CreateTransitionRequest {

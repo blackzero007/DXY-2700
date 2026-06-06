@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, FlaskConical, FileText, Clock, Tag as TagIcon, X, Plus, AlertTriangle, Paperclip } from "lucide-react"
+import { ArrowLeft, FlaskConical, FileText, Clock, Tag as TagIcon, X, Plus, AlertTriangle, Paperclip, Edit } from "lucide-react"
 import { useSampleStore } from "@/store/sampleStore"
 import { useExceptionStore } from "@/store/exceptionStore"
 import { useTagStore } from "@/store/tagStore"
 import { SampleStatus, ExceptionStatus, ExceptionType, AttachmentType } from "@/types"
-import type { Tag, SampleExceptionWithSample, SampleAttachment } from "@/types"
+import type { Tag, SampleExceptionWithSample, SampleAttachment, Sample } from "@/types"
 import TransitionTimeline from "@/components/TransitionTimeline"
 import TransitionForm from "@/components/TransitionForm"
 import ExceptionForm from "@/components/ExceptionForm"
 import ExceptionResolveForm from "@/components/ExceptionResolveForm"
 import ConfirmModal from "@/components/ConfirmModal"
 import SampleAttachmentForm from "@/components/SampleAttachmentForm"
+import StatusModal from "@/components/StatusModal"
 
 const STATUS_COLORS: Record<SampleStatus, string> = {
   [SampleStatus.REGISTERED]: "bg-blue-100 text-blue-700",
@@ -153,6 +154,7 @@ export default function SampleDetail() {
   const [showAttachmentForm, setShowAttachmentForm] = useState(false)
   const [editAttachment, setEditAttachment] = useState<SampleAttachment | null>(null)
   const [deleteAttachmentTarget, setDeleteAttachmentTarget] = useState<SampleAttachment | null>(null)
+  const [statusTarget, setStatusTarget] = useState<Sample | null>(null)
   const deleteAttachment = useSampleStore((s) => s.deleteAttachment)
 
   useEffect(() => {
@@ -235,9 +237,18 @@ export default function SampleDetail() {
               <h2 className="text-xl font-bold text-gray-800">{currentSample.name}</h2>
               <p className="text-sm font-mono text-gray-400 mt-1">{currentSample.code}</p>
             </div>
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[currentSample.status]}`}>
-              {currentSample.status}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[currentSample.status]}`}>
+                {currentSample.status}
+              </span>
+              <button
+                onClick={() => setStatusTarget(currentSample as Sample)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+              >
+                <Edit className="w-3.5 h-3.5" />
+                更新状态
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="flex items-center gap-2">
@@ -462,6 +473,14 @@ export default function SampleDetail() {
         variant="danger"
         onClose={() => setDeleteAttachmentTarget(null)}
         onConfirm={handleDeleteAttachment}
+      />
+
+      <StatusModal
+        sample={statusTarget}
+        onClose={() => setStatusTarget(null)}
+        onSuccess={() => {
+          if (id) fetchSampleDetail(Number(id))
+        }}
       />
     </div>
   )

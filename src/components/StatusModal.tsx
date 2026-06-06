@@ -37,7 +37,7 @@ export default function StatusModal({ sample, onClose, onSuccess }: StatusModalP
   const statusChanged = sample.status !== status
 
   const handleConfirm = async () => {
-    if (statusChanged && !operator.trim()) {
+    if (statusChanged && (!operator.trim() || !note.trim())) {
       return
     }
     const success = await updateSampleStatus(
@@ -99,13 +99,14 @@ export default function StatusModal({ sample, onClose, onSuccess }: StatusModalP
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">备注</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">变更备注 <span className="text-red-500">*</span></label>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm resize-none"
                   rows={3}
-                  placeholder="输入状态变更说明"
+                  placeholder="请输入状态变更的原因和说明"
+                  required
                 />
               </div>
             </>
@@ -120,7 +121,7 @@ export default function StatusModal({ sample, onClose, onSuccess }: StatusModalP
           </button>
           <button
             onClick={handleConfirm}
-            disabled={statusChanged && !operator.trim()}
+            disabled={statusChanged && (!operator.trim() || !note.trim())}
             className="px-4 py-2 text-sm bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             确认
