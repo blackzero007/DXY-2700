@@ -205,6 +205,12 @@ export default function SampleDetail() {
     (tag) => !currentSample?.tags?.find((t) => t.id === tag.id)
   )
 
+  const sortedTransitions = [...(currentSample?.transitions || [])].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
+
+  const latestTransition = sortedTransitions[0] || null
+
   const handleAddTag = (tagId: number) => {
     if (id) {
       addTagToSample(Number(id), tagId)
@@ -395,7 +401,7 @@ export default function SampleDetail() {
                     </div>
                     <p className={cn("text-lg font-bold", config.textColor)}>{config.label}</p>
                     <p className="text-xs text-gray-400 mt-1">
-                      共 {currentSample.transitions?.length || 0} 次流转
+                      共 {sortedTransitions.length || 0} 次流转
                     </p>
                   </>
                 )
@@ -428,8 +434,8 @@ export default function SampleDetail() {
             </button>
           </div>
 
-          {currentSample.transitions && currentSample.transitions.length > 0 ? (
-            <LatestTransitionCard transition={currentSample.transitions[0]} />
+          {latestTransition ? (
+            <LatestTransitionCard transition={latestTransition} />
           ) : (
             <div className="text-center py-6 text-gray-400 text-sm bg-white/50 rounded-lg border border-dashed border-gray-200">
               <Clock className="w-8 h-8 mx-auto mb-2 text-gray-300" />
@@ -547,10 +553,10 @@ export default function SampleDetail() {
             </div>
             <h3 className="text-lg font-semibold text-gray-800">流转历史</h3>
             <span className="text-xs text-gray-400">
-              共 {currentSample.transitions?.length || 0} 条记录
+            共 {sortedTransitions.length || 0} 条记录
             </span>
           </div>
-          <TransitionTimeline transitions={currentSample.transitions} />
+          <TransitionTimeline transitions={sortedTransitions} />
         </div>
 
         <TransitionForm sampleId={currentSample.id} />

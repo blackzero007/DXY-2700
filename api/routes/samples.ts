@@ -416,7 +416,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    const transStmt = db.prepare('SELECT * FROM transitions WHERE sample_id = ? ORDER BY created_at ASC')
+    const transStmt = db.prepare('SELECT * FROM transitions WHERE sample_id = ? ORDER BY created_at DESC')
     transStmt.bind([id])
     const transitions: Record<string, unknown>[] = []
     while (transStmt.step()) {
