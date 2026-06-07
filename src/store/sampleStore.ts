@@ -18,6 +18,7 @@ interface SampleStore {
   exporting: boolean
   stats: SampleStats | null
   statsLoading: boolean
+  _detailFetchId: number
   fetchSamples: (batchId?: number, tagId?: number, status?: string, sampleType?: string) => Promise<void>
   searchSamples: (query: string, batchId?: number, tagId?: number, status?: string, sampleType?: string) => Promise<void>
   refreshSamples: () => Promise<void>
@@ -73,6 +74,7 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
   exporting: false,
   stats: null,
   statsLoading: false,
+  _detailFetchId: 0,
 
   fetchSamples: async (batchId, tagId, status, sampleType) => {
     const showToast = useToastStore.getState().showToast
@@ -181,9 +183,13 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
 
   fetchSampleDetail: async (id) => {
     const showToast = useToastStore.getState().showToast
-    set({ loading: true })
+    const requestId = get()._detailFetchId + 1
+    set({ _detailFetchId: requestId, loading: true })
     try {
       const currentSample = await api.fetchSampleById(id)
+      if (get()._detailFetchId !== requestId) {
+        return false
+      }
       set({ currentSample })
       return true
     } catch (error) {
@@ -191,14 +197,28 @@ export const useSampleStore = create<SampleStore>((set, get) => ({
       showToast(message, "error")
       return false
     } finally {
-      set({ loading: false })
+      if (get()._detailFetchId === requestId) {
+        set({ loading: false })
+      }
     }
   },
 
   addTransition: async (id, data) => {
     const showToast = useToastStore.getState().showToast
     try {
-      await api.addTransition(id, data)
+      const newTransition = await api.addTransition(id, data)
+      const currentSample = get().currentSample
+      if (currentSample && currentSample.id === id) {
+        const updatedTransitions = [newTransition, ...currentSample.transitions]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        set({
+          currentSample: {
+            ...currentSample,
+            transitions: updatedTransitions,
+            updated_at: new Date().toISOString(),
+          },
+        })
+      }
       await get().fetchSampleDetail(id)
       showToast("流转记录添加成功", "success")
       return true
