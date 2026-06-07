@@ -205,11 +205,13 @@ export default function SampleDetail() {
     (tag) => !currentSample?.tags?.find((t) => t.id === tag.id)
   )
 
-  const sortedTransitions = [...(currentSample?.transitions || [])].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  )
+  const transitions = currentSample?.transitions || []
 
-  const latestTransition = sortedTransitions[0] || null
+  const latestTransition = transitions.length > 0
+    ? [...transitions].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )[0]
+    : null
 
   const handleAddTag = (tagId: number) => {
     if (id) {
@@ -401,7 +403,7 @@ export default function SampleDetail() {
                     </div>
                     <p className={cn("text-lg font-bold", config.textColor)}>{config.label}</p>
                     <p className="text-xs text-gray-400 mt-1">
-                      共 {sortedTransitions.length || 0} 次流转
+                      共 {transitions.length || 0} 次流转
                     </p>
                   </>
                 )
@@ -552,11 +554,8 @@ export default function SampleDetail() {
               <Clock className="w-4 h-4 text-gray-500" />
             </div>
             <h3 className="text-lg font-semibold text-gray-800">流转历史</h3>
-            <span className="text-xs text-gray-400">
-            共 {sortedTransitions.length || 0} 条记录
-            </span>
           </div>
-          <TransitionTimeline transitions={sortedTransitions} />
+          <TransitionTimeline transitions={transitions} />
         </div>
 
         <TransitionForm sampleId={currentSample.id} />
